@@ -1,7 +1,7 @@
 {
 	"out": "./docs/",
 	"readme": "./README.md",
-	"name": "async_event_emitter",
+	"name": "@vladfrangu/async_event_emitter",
 	"entryPoints": ["src/index.ts"],
 	"tsconfig": "./src/tsconfig.json"
 }

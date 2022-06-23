@@ -1,12 +1,12 @@
 <div align="center">
 
-# async_event_emitter
+# @vladfrangu/async_event_emitter
 
 **Simple to use event emitter implementation with async support in mind.**
 
 [![GitHub](https://img.shields.io/github/license/vladfrangu/async_event_emitter)](https://github.com/vladfrangu/async_event_emitter/blob/main/LICENSE.md)
 [![codecov](https://codecov.io/gh/vladfrangu/async_event_emitter/branch/main/graph/badge.svg?token=0MSAyoZNxz)](https://codecov.io/gh/vladfrangu/async_event_emitter)
-[![npm](https://img.shields.io/npm/v/async_event_emitter?color=crimson&logo=npm&style=flat-square)](https://www.npmjs.com/package/async_event_emitter)
+[![npm](https://img.shields.io/npm/v/async_event_emitter?color=crimson&logo=npm&style=flat-square)](https://www.npmjs.com/package/@vladfrangu/async_event_emitter)
 
 </div>
 
@@ -14,7 +14,7 @@
 
 A very small, lightweight and simple re-implementation of event emitters, with support for async event handlers in mind.
 
-> **Note**: async_event_emitter requires Node.js v14 or higher to work, or a browser that has async/await support.
+> **Note**: `@vladfrangu/async_event_emitter` requires Node.js v14 or higher to work, or a browser that has async/await support.
 
 ## Features
 
