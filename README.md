@@ -1,14 +1,12 @@
 <div align="center">
 
-![Sapphire Logo](https://cdn.skyra.pw/gh-assets/sapphire-banner.png)
+# async_event_emitter
 
-# @sapphire/template
+**Simple to use event emitter implementation with async support in mind.**
 
-**Template for Sapphire Repositories.**
-
-[![GitHub](https://img.shields.io/github/license/sapphiredev/sapphire-template)](https://github.com/sapphiredev/sapphire-template/blob/main/LICENSE.md)
-[![codecov](https://codecov.io/gh/sapphiredev/sapphire-template/branch/main/graph/badge.svg?token=0MSAyoZNxz)](https://codecov.io/gh/sapphiredev/sapphire-template)
-[![npm](https://img.shields.io/npm/v/@sapphire/template?color=crimson&logo=npm&style=flat-square)](https://www.npmjs.com/package/@sapphire/template)
+[![GitHub](https://img.shields.io/github/license/vladfrangu/async_event_emitter)](https://github.com/vladfrangu/async_event_emitter/blob/main/LICENSE.md)
+[![codecov](https://codecov.io/gh/vladfrangu/async_event_emitter/branch/main/graph/badge.svg?token=0MSAyoZNxz)](https://codecov.io/gh/vladfrangu/async_event_emitter)
+[![npm](https://img.shields.io/npm/v/async_event_emitter?color=crimson&logo=npm&style=flat-square)](https://www.npmjs.com/package/async_event_emitter)
 
 </div>
 

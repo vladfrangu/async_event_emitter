@@ -1,6 +1,6 @@
 {
-	"projectName": "template",
-	"projectOwner": "sapphiredev",
+	"projectName": "async_event_emitter",
+	"projectOwner": "vladfrangu",
 	"repoType": "github",
 	"repoHost": "https://github.com",
 	"files": ["README.md"],

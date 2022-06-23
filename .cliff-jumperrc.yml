@@ -1,0 +1,6 @@
+name: async_event_emitter
+packagePath: .
+org: vladfrangu
+monoRepo: false
+commitMessageTemplate: 'chore(release): release {{new-version}}'
+tagTemplate: v{{new-version}}
