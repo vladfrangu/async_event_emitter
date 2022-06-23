@@ -10,37 +10,31 @@
 
 </div>
 
-# Steps after creating a repo with this template
+## Description
 
-1. Find and replace all instances of `template` with the proper word / ID / etc
-1. Ensure the primary branch is called `main`
-1. Ensure branch protection is on
-1. Disable `Packages` from being included in the repository homepage
-1. Enable Codecov for the repository
-1. Remove `--dry-run` from line 47 in [`continuous-delivery.yml`](.github/workflows/continuous-delivery.yml) to enable publishing to NPM
-1. Remove this section from the README
+A very small, lightweight and simple re-implementation of event emitters, with support for async event handlers in mind.
+
+> **Note**: async_event_emitter requires Node.js v14 or higher to work, or a browser that has async/await support.
 
 ## Features
 
--   This
--   Needs
--   Some
--   More
--   Filling
--   In
+-   TypeScript friendly
+-   Offers CJS, ESM and UMD builds
+-   Consistent interface with what is expected from an event emitter
+-   Simple handling of asynchronous event handlers to allow waiting for their execution to finish if you want to exit the process
 
-## Buy us some doughnuts
+## Buy me some doughnuts
 
-Sapphire Community is and always will be open source, even if we don't get donations. That being said, we know there are amazing people who may still want to donate just to show their appreciation. Thank you very much in advance!
+Most of my projects are and always will be open source, even if I don't get donations. That being said, I know there are amazing people who may still want to donate just to show their appreciation. Thank you very much in advance!
 
-We accept donations through Open Collective, Ko-fi, Paypal, Patreon and GitHub Sponsorships. You can use the buttons below to donate through your method of choice.
+I accept donations through Ko-fi, PayPal, Patreon and GitHub Sponsorships. You can use the buttons below to donate through your method of choice.
 
-|   Donate With   |                       Address                       |
-| :-------------: | :-------------------------------------------------: |
-| Open Collective | [Click Here](https://sapphirejs.dev/opencollective) |
-|      Ko-fi      |      [Click Here](https://sapphirejs.dev/kofi)      |
-|     Patreon     |    [Click Here](https://sapphirejs.dev/patreon)     |
-|     PayPal      |     [Click Here](https://sapphirejs.dev/paypal)     |
+|   Donate With   |                         Address                          |
+| :-------------: | :------------------------------------------------------: |
+| GitHub Sponsors |   [Click Here](https://github.com/sponsors/vladfrangu)   |
+|      Ko-fi      |       [Click Here](https://ko-fi.com/wolfgalvlad)        |
+|     Patreon     |       [Click Here](https://patreon.com/vladfrangu)       |
+|     PayPal      | [Click Here](https://www.paypal.com/paypalme/franguvlad) |
 
 ## Contributors ✨
 
