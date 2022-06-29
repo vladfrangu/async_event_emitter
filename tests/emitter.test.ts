@@ -24,7 +24,7 @@ describe('AsyncEventEmitter', () => {
 		// Ensure 2 promises are created (even if one of the listeners is sync)
 		expect(Object.keys(ee['_internalPromiseMap'])).toHaveLength(2);
 
-		await ee.awaitAllListenersToComplete();
+		await ee.waitForAllListenersToComplete();
 
 		const endTime = Date.now();
 

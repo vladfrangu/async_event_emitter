@@ -1,5 +1,3 @@
-import { v4 } from 'uuid';
-
 function validateListener(input: unknown): asserts input is (...args: unknown[]) => Awaitable<void> {
 	if (typeof input !== 'function') {
 		throw new TypeError(`The listener argument must be a function. Received ${typeof input}`);
@@ -91,6 +89,7 @@ export class AsyncEventEmitter<
 	private _eventCount = 0;
 	private _maxListeners = 10;
 	private _internalPromiseMap: Record<string, Promise<void>> = Object.create(null);
+	private _wrapperId = 0n;
 
 	public addListener<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
 		eventName: K,
@@ -347,7 +346,7 @@ export class AsyncEventEmitter<
 		return this._eventCount > 0 ? Reflect.ownKeys(this._events) : [];
 	}
 
-	public async awaitAllListenersToComplete() {
+	public async waitForAllListenersToComplete() {
 		const promises = Object.values(this._internalPromiseMap);
 
 		if (promises.length === 0) {
@@ -414,7 +413,7 @@ export class AsyncEventEmitter<
 				state.eventEmitter.removeListener(eventName, listener);
 			}
 
-			const promiseUuid = v4();
+			const promiseId = String(this._wrapperId++);
 
 			const promise = new Promise<void>(async (res) => {
 				try {
@@ -431,11 +430,11 @@ export class AsyncEventEmitter<
 					// Resolve the internal promise
 					res();
 
-					delete this._internalPromiseMap[promiseUuid];
+					delete this._internalPromiseMap[promiseId];
 				}
 			});
 
-			this._internalPromiseMap[promiseUuid] = promise;
+			this._internalPromiseMap[promiseId] = promise;
 
 			await promise;
 		};
