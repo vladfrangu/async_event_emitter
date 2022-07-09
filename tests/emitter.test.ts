@@ -30,7 +30,7 @@ describe('AsyncEventEmitter', () => {
 
 		expect(fn).toHaveBeenCalled();
 		expect(longFn).toHaveBeenCalled();
-		expect(endTime - startTime).toBeGreaterThan(100);
+		expect(endTime - startTime).toBeGreaterThanOrEqual(100);
 
 		// Ensure the promises were deleted
 		expect(ee['_internalPromiseMap']).toStrictEqual(Object.create(null));

@@ -397,7 +397,7 @@ export class AsyncEventEmitter<
 		const state = {
 			fired: false,
 			listener,
-			target: this,
+			eventEmitter: this,
 			once
 		} as unknown as StoredListener;
 
