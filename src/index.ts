@@ -94,34 +94,34 @@ export class AsyncEventEmitter<
 	public addListener<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
 		eventName: K,
 		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : Events[K]) => void
-	): this {
+	): () => this {
 		validateListener(listener);
 
 		const wrapped = this.#_wrapListener(eventName, listener, false);
 
 		this.#_addListener(eventName, wrapped, false);
 
-		return this;
+		return () => this.off(eventName, listener);
 	}
 
 	public on<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
 		eventName: K,
 		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : Events[K]) => void
-	): this {
+	): () => this {
 		return this.addListener(eventName, listener);
 	}
 
 	public once<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
 		eventName: K,
 		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : Events[K]) => void
-	): this {
+	): () => this {
 		validateListener(listener);
 
 		const wrapped = this.#_wrapListener(eventName, listener, true);
 
 		this.#_addListener(eventName, wrapped, false);
 
-		return this;
+		return () => this.off(eventName, listener);
 	}
 
 	public removeListener<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
