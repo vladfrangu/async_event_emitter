@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+# [2.1.0](https://github.com/vladfrangu/async_event_emitter/compare/v2.0.1...v2.1.0) - (2022-09-18)
+
+## 🚀 Features
+
+- Bring in line with nodejs EventEmitters ([5a14ed0](https://github.com/vladfrangu/async_event_emitter/commit/5a14ed04bf87ec6a34cd33e26e3f25f101f87bcd))
+
 # [2.0.1](https://github.com/vladfrangu/async_event_emitter/compare/v2.0.0...v2.0.1) - (2022-07-09)
 
 ## 🐛 Bug Fixes
