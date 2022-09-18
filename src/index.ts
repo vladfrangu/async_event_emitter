@@ -4,6 +4,13 @@ function validateListener(input: unknown): asserts input is (...args: unknown[])
 	}
 }
 
+function validateAbortSignal(input: unknown): asserts input is AbortSignal | undefined {
+	// Only validate that the signal is a signal if its defined
+	if (input && !(input instanceof AbortSignal)) {
+		throw new TypeError(`The signal option must be an AbortSignal. Received ${input}`);
+	}
+}
+
 // Inspired from https://github.com/nodejs/node/blob/42ad967d68137df1a80a877e7b5ad56403fc157f/lib/internal/util.js#L397
 function spliceOne(list: unknown[], index: number) {
 	for (; index + 1 < list.length; index++) {
@@ -82,9 +89,7 @@ interface InternalEventMap extends Array<StoredListener> {
 	_hasWarnedAboutMaxListeners?: boolean;
 }
 
-export class AsyncEventEmitter<
-	Events extends Record<string | symbol, unknown[]> = Record<string | symbol, unknown[]> & AsyncEventEmitterPredefinedEvents
-> {
+export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = Record<PropertyKey, unknown[]> & AsyncEventEmitterPredefinedEvents> {
 	private _events: Record<keyof Events | keyof AsyncEventEmitterPredefinedEvents, InternalEventMap> = Object.create(null);
 	private _eventCount = 0;
 	private _maxListeners = 10;
@@ -385,7 +390,7 @@ export class AsyncEventEmitter<
 				}.`,
 				`Use emitter.setMaxListeners() to increase the limit.`
 			].join(' ');
-			console.warn(warningMessage, this);
+			console.warn(warningMessage);
 		}
 	}
 
@@ -443,6 +448,190 @@ export class AsyncEventEmitter<
 
 		return state;
 	}
+
+	public static listenerCount<
+		Emitter extends AsyncEventEmitter<any>,
+		EventNames = Emitter extends AsyncEventEmitter<infer Events> ? Events : never,
+		EventName extends PropertyKey = EventNames extends never ? string | symbol : keyof EventNames
+	>(emitter: Emitter, eventName: EventName | keyof AsyncEventEmitterPredefinedEvents) {
+		return emitter._eventCount > 0 ? emitter._events[eventName]?.length ?? 0 : 0;
+	}
+
+	public static async once<
+		Emitter extends AsyncEventEmitter<any>,
+		EventNames extends Record<PropertyKey, unknown[]> = Emitter extends AsyncEventEmitter<infer Events> ? Events : Record<PropertyKey, unknown[]>,
+		EventName extends PropertyKey = keyof EventNames | keyof AsyncEventEmitterPredefinedEvents,
+		EventResult extends unknown[] = EventName extends keyof AsyncEventEmitterPredefinedEvents
+			? AsyncEventEmitterPredefinedEvents[EventName]
+			: EventNames[EventName]
+	>(emitter: Emitter, eventName: EventName, options: AbortableMethods = {}) {
+		const signal = options?.signal;
+		validateAbortSignal(signal);
+
+		if (signal?.aborted) {
+			throw new AbortError(undefined, { cause: signal?.reason });
+		}
+
+		return new Promise<EventResult>((resolve, reject) => {
+			const errorListener = (err: unknown) => {
+				emitter.off(eventName, resolver);
+
+				if (signal) {
+					eventTargetAgnosticRemoveListener(emitter, eventName, abortListener);
+				}
+
+				reject(err);
+			};
+
+			const resolver = (...args: unknown[]) => {
+				emitter.off('error', errorListener);
+
+				if (signal) {
+					eventTargetAgnosticRemoveListener(signal, 'abort', abortListener);
+				}
+
+				resolve(args as EventResult);
+			};
+
+			emitter.once(eventName, resolver);
+			if (eventName !== 'error') {
+				emitter.once('error', errorListener);
+			}
+
+			const abortListener = () => {
+				eventTargetAgnosticRemoveListener(emitter, eventName, resolver);
+				eventTargetAgnosticRemoveListener(emitter, 'error', errorListener);
+				reject(new AbortError(undefined, { cause: signal?.reason }));
+			};
+
+			if (signal) {
+				eventTargetAgnosticAddListener(signal, 'abort', abortListener, { once: true });
+			}
+		});
+	}
+
+	public static on<
+		Emitter extends AsyncEventEmitter<any>,
+		EventNames extends Record<PropertyKey, unknown[]> = Emitter extends AsyncEventEmitter<infer Events> ? Events : Record<PropertyKey, unknown[]>,
+		EventName extends PropertyKey = keyof EventNames | keyof AsyncEventEmitterPredefinedEvents,
+		EventResult extends unknown[] = EventName extends keyof AsyncEventEmitterPredefinedEvents
+			? AsyncEventEmitterPredefinedEvents[EventName]
+			: EventNames[EventName]
+	>(emitter: Emitter, eventName: EventName, options: AbortableMethods = {}): AsyncGenerator<EventResult, void> {
+		const signal = options?.signal;
+		validateAbortSignal(signal);
+
+		if (signal?.aborted) {
+			throw new AbortError(undefined, { cause: signal?.reason });
+		}
+
+		const unconsumedEvents: unknown[][] = [];
+		const unconsumedPromises: { resolve: (value?: unknown) => void; reject: (reason?: unknown) => void }[] = [];
+		let error: unknown = null;
+		let finished = false;
+
+		const abortListener = () => {
+			errorHandler(new AbortError(undefined, { cause: signal?.reason }));
+		};
+
+		const eventHandler = (...args: unknown[]) => {
+			const promise = unconsumedPromises.shift();
+			if (promise) {
+				promise.resolve(createIterResult(args, false));
+			} else {
+				unconsumedEvents.push(args);
+			}
+		};
+
+		const errorHandler = (err: unknown) => {
+			finished = true;
+
+			const toError = unconsumedPromises.shift();
+
+			if (toError) {
+				toError.reject(err);
+			} else {
+				error = err;
+			}
+
+			void iterator.return();
+		};
+
+		const iterator: AsyncGenerator<EventResult, void> = Object.setPrototypeOf(
+			{
+				next() {
+					// First, we consume all unread events
+					const value = unconsumedEvents.shift();
+					if (value) {
+						return Promise.resolve(createIterResult(value, false));
+					}
+
+					// Then we error, if an error happened
+					// This happens one time if at all, because after 'error'
+					// we stop listening
+					if (error) {
+						const p = Promise.reject(error);
+						// Only the first element errors
+						error = null;
+						return p;
+					}
+
+					// If the iterator is finished, resolve to done
+					if (finished) {
+						return Promise.resolve(createIterResult(undefined, true));
+					}
+
+					// Wait until an event happens
+					return new Promise((resolve, reject) => {
+						unconsumedPromises.push({ resolve, reject });
+					});
+				},
+
+				return() {
+					emitter.off(eventName, eventHandler);
+					emitter.off('error', errorHandler);
+
+					if (signal) {
+						eventTargetAgnosticRemoveListener(signal, 'abort', abortListener);
+					}
+
+					finished = true;
+
+					for (const promise of unconsumedPromises) {
+						promise.resolve(createIterResult(undefined, true));
+					}
+
+					return Promise.resolve(createIterResult(undefined, true));
+				},
+
+				throw(err: unknown) {
+					if (!err || !(err instanceof Error)) {
+						throw new TypeError(`Expected Error instance to be thrown in AsyncEventEmitter.AsyncIterator. Got ${err}`);
+					}
+
+					error = err;
+					emitter.off(eventName, eventHandler);
+					emitter.off('error', errorHandler);
+				},
+
+				[Symbol.asyncIterator]() {
+					return this;
+				}
+			},
+			AsyncIteratorPrototype
+		);
+
+		emitter.on(eventName, eventHandler);
+		if (eventName !== 'error') {
+			emitter.on('error', errorHandler);
+		}
+
+		if (signal) {
+			eventTargetAgnosticAddListener(signal, 'abort', abortListener);
+		}
+
+		return iterator;
+	}
 }
 
 export interface AsyncEventEmitterPredefinedEvents {
@@ -461,3 +650,76 @@ export interface StoredListener<Args extends any[] = any[]> {
 }
 
 export type Awaitable<T> = T | Promise<T>;
+
+export interface AbortableMethods {
+	signal?: AbortSignal;
+}
+
+declare global {
+	interface AbortSignal {
+		reason?: string;
+		addEventListener(event: 'abort', callback: () => void): AbortSignal;
+	}
+}
+
+function eventTargetAgnosticRemoveListener(
+	emitter: EmitterLike,
+	name: PropertyKey,
+	listener: (...args: unknown[]) => any,
+	flags?: InternalAgnosticFlags
+) {
+	if (typeof emitter.off === 'function') {
+		emitter.off(name, listener);
+	} else if (typeof emitter.removeEventListener === 'function') {
+		emitter.removeEventListener(name, listener, flags);
+	}
+}
+
+function eventTargetAgnosticAddListener(
+	emitter: EmitterLike,
+	name: string | symbol,
+	listener: (...args: unknown[]) => any,
+	flags?: InternalAgnosticFlags
+) {
+	if (typeof emitter.on === 'function') {
+		if (flags?.once) {
+			emitter.once!(name, listener);
+		} else {
+			emitter.on(name, listener);
+		}
+	} else if (typeof emitter.addEventListener === 'function') {
+		emitter.addEventListener(name, listener, flags);
+	}
+}
+
+interface InternalAgnosticFlags {
+	once?: boolean;
+}
+
+interface EmitterLike {
+	on?(...args: unknown[]): EmitterLike;
+	once?(...args: unknown[]): EmitterLike;
+	off?(...args: unknown[]): EmitterLike;
+	addEventListener?(...args: unknown[]): EmitterLike;
+	removeEventListener?(...args: unknown[]): EmitterLike;
+}
+
+// eslint-disable-next-line func-names, @typescript-eslint/no-empty-function
+const AsyncIteratorPrototype = Object.getPrototypeOf(Object.getPrototypeOf(async function* () {}).prototype);
+
+function createIterResult(value: unknown, done: boolean) {
+	return { value, done };
+}
+
+export class AbortError extends Error {
+	public readonly code = 'ABORT_ERR';
+	public override readonly name = 'AbortError';
+
+	public constructor(message = 'The operation was aborted', options: ErrorOptions | undefined = undefined) {
+		if (options !== undefined && typeof options !== 'object') {
+			throw new TypeError(`Failed to create AbortError: options is not an object or undefined`);
+		}
+
+		super(message, options);
+	}
+}
