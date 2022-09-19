@@ -469,7 +469,7 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 		validateAbortSignal(signal);
 
 		if (signal?.aborted) {
-			throw new AbortError(undefined, { cause: signal?.reason });
+			throw new AbortError(undefined, { cause: getReason(signal) });
 		}
 
 		return new Promise<EventResult>((resolve, reject) => {
@@ -501,7 +501,7 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 			const abortListener = () => {
 				eventTargetAgnosticRemoveListener(emitter, eventName, resolver);
 				eventTargetAgnosticRemoveListener(emitter, 'error', errorListener);
-				reject(new AbortError(undefined, { cause: signal?.reason }));
+				reject(new AbortError(undefined, { cause: getReason(signal) }));
 			};
 
 			if (signal) {
@@ -522,7 +522,7 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 		validateAbortSignal(signal);
 
 		if (signal?.aborted) {
-			throw new AbortError(undefined, { cause: signal?.reason });
+			throw new AbortError(undefined, { cause: getReason(signal) });
 		}
 
 		const unconsumedEvents: unknown[][] = [];
@@ -531,7 +531,7 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 		let finished = false;
 
 		const abortListener = () => {
-			errorHandler(new AbortError(undefined, { cause: signal?.reason }));
+			errorHandler(new AbortError(undefined, { cause: getReason(signal) }));
 		};
 
 		const eventHandler = (...args: unknown[]) => {
@@ -655,19 +655,15 @@ export interface AbortableMethods {
 	signal?: AbortSignal;
 }
 
-declare global {
-	interface AbortSignal {
-		reason?: string;
-		addEventListener(event: 'abort', callback: () => void): AbortSignal;
-	}
+/**
+ * A TypeScript not-compliant way of accessing AbortSignal#reason
+ * Because DOM types have it, NodeJS types don't. -w-
+ */
+function getReason(signal: any) {
+	return signal?.reason;
 }
 
-function eventTargetAgnosticRemoveListener(
-	emitter: EmitterLike,
-	name: PropertyKey,
-	listener: (...args: unknown[]) => any,
-	flags?: InternalAgnosticFlags
-) {
+function eventTargetAgnosticRemoveListener(emitter: any, name: PropertyKey, listener: (...args: unknown[]) => any, flags?: InternalAgnosticFlags) {
 	if (typeof emitter.off === 'function') {
 		emitter.off(name, listener);
 	} else if (typeof emitter.removeEventListener === 'function') {
@@ -675,12 +671,7 @@ function eventTargetAgnosticRemoveListener(
 	}
 }
 
-function eventTargetAgnosticAddListener(
-	emitter: EmitterLike,
-	name: string | symbol,
-	listener: (...args: unknown[]) => any,
-	flags?: InternalAgnosticFlags
-) {
+function eventTargetAgnosticAddListener(emitter: any, name: string | symbol, listener: (...args: unknown[]) => any, flags?: InternalAgnosticFlags) {
 	if (typeof emitter.on === 'function') {
 		if (flags?.once) {
 			emitter.once!(name, listener);
@@ -694,14 +685,6 @@ function eventTargetAgnosticAddListener(
 
 interface InternalAgnosticFlags {
 	once?: boolean;
-}
-
-interface EmitterLike {
-	on?(...args: unknown[]): EmitterLike;
-	once?(...args: unknown[]): EmitterLike;
-	off?(...args: unknown[]): EmitterLike;
-	addEventListener?(...args: unknown[]): EmitterLike;
-	removeEventListener?(...args: unknown[]): EmitterLike;
 }
 
 // eslint-disable-next-line func-names, @typescript-eslint/no-empty-function
