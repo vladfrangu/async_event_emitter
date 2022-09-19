@@ -694,11 +694,15 @@ function createIterResult(value: unknown, done: boolean) {
 	return { value, done };
 }
 
+export interface AbortErrorOptions {
+	cause?: unknown;
+}
+
 export class AbortError extends Error {
 	public readonly code = 'ABORT_ERR';
 	public override readonly name = 'AbortError';
 
-	public constructor(message = 'The operation was aborted', options: ErrorOptions | undefined = undefined) {
+	public constructor(message = 'The operation was aborted', options: AbortErrorOptions | undefined = undefined) {
 		if (options !== undefined && typeof options !== 'object') {
 			throw new TypeError(`Failed to create AbortError: options is not an object or undefined`);
 		}
