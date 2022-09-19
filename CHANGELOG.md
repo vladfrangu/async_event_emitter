@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+# [2.1.2](https://github.com/vladfrangu/async_event_emitter/compare/v2.1.1...v2.1.2) - (2022-09-19)
+
+## 🐛 Bug Fixes
+
+- Don't use any `@types/node` types ([e4babce](https://github.com/vladfrangu/async_event_emitter/commit/e4babce88c17befdb6f84c73c0de2e0602260681))
+
 # [2.1.1](https://github.com/vladfrangu/async_event_emitter/compare/v2.1.0...v2.1.1) - (2022-09-19)
 
 ## 🐛 Bug Fixes
