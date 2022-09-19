@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+# [2.1.1](https://github.com/vladfrangu/async_event_emitter/compare/v2.1.0...v2.1.1) - (2022-09-19)
+
+## 🐛 Bug Fixes
+
+- Correct type errors when building with other types too ([72a03ae](https://github.com/vladfrangu/async_event_emitter/commit/72a03ae1ac30456241b4003a7c2ea93d27e8de5e))
+
 # [2.1.0](https://github.com/vladfrangu/async_event_emitter/compare/v2.0.1...v2.1.0) - (2022-09-18)
 
 ## 🚀 Features
