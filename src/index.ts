@@ -102,9 +102,9 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 	): this {
 		validateListener(listener);
 
-		const wrapped = this.#_wrapListener(eventName, listener, false);
+		const wrapped = this._wrapListener(eventName, listener, false);
 
-		this.#_addListener(eventName, wrapped, false);
+		this._addListener(eventName, wrapped, false);
 
 		return this;
 	}
@@ -122,9 +122,9 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 	): this {
 		validateListener(listener);
 
-		const wrapped = this.#_wrapListener(eventName, listener, true);
+		const wrapped = this._wrapListener(eventName, listener, true);
 
-		this.#_addListener(eventName, wrapped, false);
+		this._addListener(eventName, wrapped, false);
 
 		return this;
 	}
@@ -327,9 +327,9 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 	): this {
 		validateListener(listener);
 
-		const wrapped = this.#_wrapListener(eventName, listener, false);
+		const wrapped = this._wrapListener(eventName, listener, false);
 
-		this.#_addListener(eventName, wrapped, true);
+		this._addListener(eventName, wrapped, true);
 
 		return this;
 	}
@@ -340,9 +340,9 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 	): this {
 		validateListener(listener);
 
-		const wrapped = this.#_wrapListener(eventName, listener, true);
+		const wrapped = this._wrapListener(eventName, listener, true);
 
-		this.#_addListener(eventName, wrapped, true);
+		this._addListener(eventName, wrapped, true);
 
 		return this;
 	}
@@ -363,7 +363,11 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 		return true;
 	}
 
-	#_addListener<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(eventName: K, wrappedListener: StoredListener, prepend: boolean) {
+	private _addListener<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
+		eventName: K,
+		wrappedListener: StoredListener,
+		prepend: boolean
+	) {
 		// Emit newListener first in the event someone is listening for it
 		if (this._events.newListener !== undefined) {
 			// Thanks TypeScript for the cast...
@@ -394,7 +398,7 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 		}
 	}
 
-	#_wrapListener<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
+	private _wrapListener<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
 		eventName: K,
 		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : Events[K]) => void,
 		once: boolean
