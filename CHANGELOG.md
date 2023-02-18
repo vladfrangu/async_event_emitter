@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+# [2.1.4](https://github.com/vladfrangu/async_event_emitter/compare/v2.1.3...v2.1.4) - (2023-02-18)
+
+## 🐛 Bug Fixes
+
+- Remove predefined error event to allow extensions ([4224bbe](https://github.com/vladfrangu/async_event_emitter/commit/4224bbeae5c25cb94d4073600a9dff7ae3abcceb))
+
 # [2.1.2](https://github.com/vladfrangu/async_event_emitter/compare/v2.1.1...v2.1.2) - (2022-09-19)
 
 ## 🐛 Bug Fixes
