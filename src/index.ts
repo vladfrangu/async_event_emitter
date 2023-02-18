@@ -641,7 +641,6 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 export interface AsyncEventEmitterPredefinedEvents {
 	newListener: [eventName: string | symbol, listener: (...args: any[]) => Awaitable<void>];
 	removeListener: [eventName: string | symbol, listener: (...args: any[]) => Awaitable<void>];
-	error: [error: unknown];
 }
 
 export interface StoredListener<Args extends any[] = any[]> {
