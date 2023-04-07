@@ -20,9 +20,9 @@ describe('AsyncEventEmitter', () => {
 		ee.emit('test');
 
 		// Ensure the promises are created
-		expect(ee['_internalPromiseMap']).not.toStrictEqual(Object.create(null));
+		expect(ee._internalPromiseMap).not.toStrictEqual(new Map());
 		// Ensure 2 promises are created (even if one of the listeners is sync)
-		expect(Object.keys(ee['_internalPromiseMap'])).toHaveLength(2);
+		expect([...ee._internalPromiseMap.keys()]).toHaveLength(1);
 
 		await ee.waitForAllListenersToComplete();
 
@@ -33,6 +33,6 @@ describe('AsyncEventEmitter', () => {
 		expect(endTime - startTime).toBeGreaterThanOrEqual(100);
 
 		// Ensure the promises were deleted
-		expect(ee['_internalPromiseMap']).toStrictEqual(Object.create(null));
+		expect(ee._internalPromiseMap).toStrictEqual(new Map());
 	});
 });

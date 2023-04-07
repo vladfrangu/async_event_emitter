@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/dot-notation */
 function validateListener(input: unknown): asserts input is (...args: unknown[]) => Awaitable<void> {
 	if (typeof input !== 'function') {
 		throw new TypeError(`The listener argument must be a function. Received ${typeof input}`);
@@ -85,15 +86,18 @@ function enhanceStackTrace(this: AsyncEventEmitter<any>, err: Error, own: Error)
 	return err.stack + sep + ownStack.join('\n');
 }
 
-interface InternalEventMap extends Array<StoredListener> {
+interface InternalEventMap extends Array<Listener | WrappedOnce> {
 	_hasWarnedAboutMaxListeners?: boolean;
 }
 
 export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = Record<PropertyKey, unknown[]> & AsyncEventEmitterPredefinedEvents> {
-	private _events: Record<keyof Events | keyof AsyncEventEmitterPredefinedEvents, InternalEventMap> = Object.create(null);
+	private _events: Record<keyof Events | keyof AsyncEventEmitterPredefinedEvents, Listener | WrappedOnce | InternalEventMap> = {
+		__proto__: null
+	} as Record<keyof Events | keyof AsyncEventEmitterPredefinedEvents, Listener | WrappedOnce | InternalEventMap>;
+
 	private _eventCount = 0;
 	private _maxListeners = 10;
-	private _internalPromiseMap: Record<string, Promise<void>> = Object.create(null);
+	private _internalPromiseMap: Map<string, Promise<void>> = new Map();
 	private _wrapperId = 0n;
 
 	public addListener<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
@@ -135,39 +139,54 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 	): this {
 		validateListener(listener);
 
-		const eventList = this._events[eventName];
+		const events = this._events;
+		const eventList = events[eventName];
 
 		if (eventList === undefined) {
 			return this;
 		}
 
-		let position = -1;
-
-		for (let i = eventList.length - 1; i >= 0; i--) {
-			if (eventList[i].listener === listener) {
-				position = i;
-				break;
+		if (eventList === listener || (eventList as WrappedOnce).listener === listener) {
+			if (--this._eventCount === 0) {
+				this._events = { __proto__: null } as Record<
+					keyof Events | keyof AsyncEventEmitterPredefinedEvents,
+					Listener | WrappedOnce | InternalEventMap
+				>;
+			} else {
+				delete events[eventName];
+				if (events.removeListener) {
+					this.emit('removeListener', eventName as string, (eventList as WrappedOnce).listener ?? eventList);
+				}
 			}
-		}
+		} else if (typeof eventList !== 'function') {
+			let position = -1;
 
-		if (position < 0) {
-			return this;
-		}
+			for (let i = eventList.length - 1; i >= 0; i--) {
+				if (eventList[i] === listener || (eventList[i] as WrappedOnce).listener === listener) {
+					position = i;
+					break;
+				}
+			}
 
-		if (position === 0) {
-			eventList.shift();
-		} else {
-			spliceOne(eventList, position);
-		}
+			if (position < 0) {
+				return this;
+			}
 
-		if (eventList.length === 0) {
-			delete this._events[eventName];
-			--this._eventCount;
-		}
+			if (position === 0) {
+				eventList.shift();
+			} else {
+				spliceOne(eventList, position);
+			}
 
-		if (this._events.removeListener !== undefined) {
-			// Thanks TypeScript for the cast...
-			this.emit('removeListener', eventName as string | symbol, listener);
+			if (eventList.length === 0) {
+				delete events[eventName];
+				--this._eventCount;
+			}
+
+			if (events.removeListener !== undefined) {
+				// Thanks TypeScript for the cast...
+				this.emit('removeListener', eventName as string | symbol, listener);
+			}
 		}
 
 		return this;
@@ -181,15 +200,18 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 	}
 
 	public removeAllListeners<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(event?: K | undefined): this {
+		const events = this._events;
+
 		// Not listening for removeListener, no need to emit
-		if (this._events.removeListener === undefined) {
+		if (events.removeListener === undefined) {
 			if (!event) {
-				this._events = Object.create(null);
-			} else if (this._events[event] !== undefined) {
+				this._events = { __proto__: null } as Record<keyof Events | keyof AsyncEventEmitterPredefinedEvents, InternalEventMap>;
+				this._eventCount = 0;
+			} else if (events[event] !== undefined) {
 				if (--this._eventCount === 0) {
-					this._events = Object.create(null);
+					this._events = { __proto__: null } as Record<keyof Events | keyof AsyncEventEmitterPredefinedEvents, InternalEventMap>;
 				} else {
-					delete this._events[event];
+					delete events[event];
 				}
 			}
 
@@ -198,7 +220,7 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 
 		// Emit removeListener for all listeners on all events
 		if (!event) {
-			for (const key of Reflect.ownKeys(this._events)) {
+			for (const key of Reflect.ownKeys(events)) {
 				if (key === 'removeListener') {
 					continue;
 				}
@@ -206,18 +228,20 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 			}
 
 			this.removeAllListeners('removeListener');
-			this._events = Object.create(null);
+			this._events = { __proto__: null } as Record<keyof Events | keyof AsyncEventEmitterPredefinedEvents, InternalEventMap>;
 			this._eventCount = 0;
 
 			return this;
 		}
 
-		const listeners = this._events[event];
+		const listeners = events[event];
 
-		if (listeners !== undefined) {
+		if (typeof listeners === 'function') {
+			this.removeListener(event, listeners);
+		} else if (listeners !== undefined) {
 			// LIFO order
 			for (let i = listeners.length - 1; i >= 0; i--) {
-				this.removeListener(event, listeners[i].listener);
+				this.removeListener(event, listeners[i]);
 			}
 		}
 
@@ -238,33 +262,55 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 		return this._maxListeners;
 	}
 
-	public listeners<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
-		eventName: K
-	): StoredListener<Events[keyof Events]>['listener'][] {
+	public listeners<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(eventName: K): Listener<Events[keyof Events]>['listener'][] {
 		const eventList = this._events[eventName];
 
 		if (eventList === undefined) {
 			return [];
 		}
 
-		return eventList.map(({ listener }) => listener);
+		if (typeof eventList === 'function') {
+			return [eventList.listener ?? eventList];
+		}
+
+		const ret = arrayClone(eventList) as Listener<Events[keyof Events]>['listener'][];
+
+		for (let i = 0; i < ret.length; ++i) {
+			const orig = (ret[i] as WrappedOnce).listener;
+			if (typeof orig === 'function') {
+				ret[i] = orig;
+			}
+		}
+
+		return ret;
 	}
 
-	public rawListeners<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(eventName: K): StoredListener<Events[keyof Events]>[] {
+	public rawListeners<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(eventName: K): Listener<Events[keyof Events]>[] {
 		const eventList = this._events[eventName];
 
 		if (eventList === undefined) {
 			return [];
 		}
 
-		return arrayClone(eventList);
+		if (typeof eventList === 'function') {
+			return [eventList];
+		}
+
+		return arrayClone(eventList) as Listener<Events[keyof Events]>[];
 	}
 
 	public emit<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
 		eventName: K,
 		...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : Events[K]
 	): boolean {
-		const doError = eventName === 'error' && this._events.error === undefined;
+		let doError = eventName === 'error';
+
+		const events = this._events;
+		if (events !== undefined) {
+			doError = doError && events.error === undefined;
+		} else if (!doError) {
+			return false;
+		}
 
 		if (doError) {
 			let er: unknown;
@@ -300,18 +346,30 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 			throw err; // Unhandled 'error' event
 		}
 
-		const handlers = this._events[eventName];
+		const handlers = events[eventName];
 
 		if (handlers === undefined) {
 			return false;
 		}
 
-		const len = handlers.length;
-		const listeners = arrayClone(handlers);
+		if (typeof handlers === 'function') {
+			const result = handlers.apply(this, args);
 
-		for (let i = 0; i < len; ++i) {
-			// We call all listeners regardless of the result, as we already handle possible error emits in the wrapped func
-			void listeners[i].wrappedFunc(...args);
+			if (result !== undefined && result !== null) {
+				handleMaybeAsync(this, result);
+			}
+		} else {
+			const len = handlers.length;
+			const listeners = arrayClone(handlers as InternalEventMap);
+
+			for (let i = 0; i < len; ++i) {
+				// We call all listeners regardless of the result, as we already handle possible error emits in the wrapped func
+				const result = listeners[i].apply(this, args);
+
+				if (result !== undefined && result !== null) {
+					handleMaybeAsync(this, result);
+				}
+			}
 		}
 
 		return true;
@@ -352,7 +410,7 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 	}
 
 	public async waitForAllListenersToComplete() {
-		const promises = Object.values(this._internalPromiseMap);
+		const promises = [...this._internalPromiseMap.values()];
 
 		if (promises.length === 0) {
 			return false;
@@ -365,21 +423,26 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 
 	private _addListener<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
 		eventName: K,
-		wrappedListener: StoredListener,
+		wrappedListener: Listener | WrappedOnce,
 		prepend: boolean
 	) {
 		// Emit newListener first in the event someone is listening for it
 		if (this._events.newListener !== undefined) {
 			// Thanks TypeScript for the cast...
-			this.emit('newListener', eventName as string | symbol, wrappedListener.listener);
+			this.emit('newListener', eventName as string | symbol, (wrappedListener as WrappedOnce).listener ?? wrappedListener);
 		}
 
 		let existing = this._events[eventName];
 
 		if (existing === undefined) {
 			// eslint-disable-next-line no-multi-assign
-			existing = this._events[eventName] = [wrappedListener];
-			this._eventCount++;
+			existing = this._events[eventName] = wrappedListener;
+			++this._eventCount;
+		} else if (typeof existing === 'function') {
+			// Adding the second element, need to change to array.
+			// eslint-disable-next-line no-multi-assign
+			existing = this._events[eventName] = prepend ? [wrappedListener, existing] : [existing, wrappedListener];
+			// If we've already got an array, just append.
 		} else if (prepend) {
 			existing.unshift(wrappedListener);
 		} else {
@@ -400,57 +463,30 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 
 	private _wrapListener<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
 		eventName: K,
-		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : Events[K]) => void,
+		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : Events[K]) => Awaitable<void>,
 		once: boolean
-	) {
+	): Listener | WrappedOnce {
+		if (!once) {
+			return listener as Listener;
+		}
+
 		const state = {
 			fired: false,
-			listener,
+			wrapFn: undefined!,
 			eventEmitter: this,
-			once
-		} as unknown as StoredListener;
+			eventName,
+			listener
+		} as WrappedOnceState<K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : Events[K]>;
 
-		const wrappedFn = async (...args: any[]) => {
-			if (state.once && state.fired) {
-				// Prevent execution if this listener is meant to be ran only once and it was already ran
-				return;
-			}
+		const aliased = onceWrapper<K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : Events[K]>;
 
-			// Remove the listener to prevent subsequent executions
-			if (state.once) {
-				state.fired = true;
-				state.eventEmitter.removeListener(eventName, listener);
-			}
+		const wrapped = aliased.bind(state) as WrappedOnce<
+			K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : Events[K]
+		>;
+		wrapped.listener = listener;
+		state.wrapFn = wrapped;
 
-			const promiseId = String(this._wrapperId++);
-
-			const promise = new Promise<void>(async (res) => {
-				try {
-					// Execute the actual listener
-					if (args.length === 0) {
-						await state.listener.call(this);
-					} else {
-						await state.listener.apply(this, args);
-					}
-				} catch (err) {
-					// Emit the error event
-					state.eventEmitter.emit('error', err);
-				} finally {
-					// Resolve the internal promise
-					res();
-
-					delete this._internalPromiseMap[promiseId];
-				}
-			});
-
-			this._internalPromiseMap[promiseId] = promise;
-
-			await promise;
-		};
-
-		state.wrappedFunc = wrappedFn;
-
-		return state;
+		return wrapped as WrappedOnce;
 	}
 
 	public static listenerCount<
@@ -478,7 +514,7 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 
 		return new Promise<EventResult>((resolve, reject) => {
 			const errorListener = (err: unknown) => {
-				emitter.off(eventName, resolver);
+				emitter.removeListener(eventName, resolver);
 
 				if (signal) {
 					eventTargetAgnosticRemoveListener(emitter, eventName, abortListener);
@@ -488,7 +524,7 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 			};
 
 			const resolver = (...args: unknown[]) => {
-				emitter.off('error', errorListener);
+				emitter.removeListener('error', errorListener);
 
 				if (signal) {
 					eventTargetAgnosticRemoveListener(signal, 'abort', abortListener);
@@ -601,11 +637,12 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 
 					finished = true;
 
+					const doneResult = createIterResult(undefined, true);
 					for (const promise of unconsumedPromises) {
-						promise.resolve(createIterResult(undefined, true));
+						promise.resolve(doneResult);
 					}
 
-					return Promise.resolve(createIterResult(undefined, true));
+					return Promise.resolve(doneResult);
 				},
 
 				throw(err: unknown) {
@@ -643,19 +680,46 @@ export interface AsyncEventEmitterPredefinedEvents {
 	removeListener: [eventName: string | symbol, listener: (...args: any[]) => Awaitable<void>];
 }
 
-export interface StoredListener<Args extends any[] = any[]> {
-	wrappedFunc: (...args: Args) => Promise<void>;
+interface WrappedOnceState<Args extends any[] = any[]> {
 	listener: (...args: Args) => Awaitable<void>;
 	fired: boolean;
-	once: boolean;
 	eventName: string | symbol;
 	eventEmitter: AsyncEventEmitter<any>;
+	wrapFn: (...args: Args) => Awaitable<void>;
+}
+
+export interface WrappedOnce<Args extends any[] = any[]> {
+	(...args: Args): Awaitable<void>;
+	listener: (...args: Args) => Awaitable<void>;
+	_hasWarnedAboutMaxListeners?: boolean;
+}
+
+export interface Listener<Args extends any[] = any[]> {
+	(...args: Args): Awaitable<void>;
+	listener: (...args: Args) => Awaitable<void>;
+	_hasWarnedAboutMaxListeners?: boolean;
 }
 
 export type Awaitable<T> = T | Promise<T>;
 
 export interface AbortableMethods {
 	signal?: AbortSignal;
+}
+
+// @ts-ignore Not all paths returning is fine just fine:tm:
+function onceWrapper<Args extends any[] = any[]>(this: WrappedOnceState<Args>) {
+	if (!this.fired) {
+		this.eventEmitter.removeListener(this.eventName, this.wrapFn);
+		this.fired = true;
+		// eslint-disable-next-line @typescript-eslint/dot-notation
+		if (arguments.length === 0) {
+			// @ts-expect-error Types can be hell
+			return this.listener.call(this.eventEmitter);
+		}
+
+		// eslint-disable-next-line prefer-rest-params
+		return this.listener.apply(this.eventEmitter, arguments as unknown as Args);
+	}
 }
 
 /**
@@ -711,5 +775,21 @@ export class AbortError extends Error {
 		}
 
 		super(message, options);
+	}
+}
+
+function handleMaybeAsync(emitter: AsyncEventEmitter<any>, result: any) {
+	try {
+		const fin = result.finally;
+
+		if (typeof fin === 'function') {
+			const promiseId = String(++emitter['_wrapperId']);
+			emitter['_internalPromiseMap'].set(promiseId, result);
+			fin.call(result, function final() {
+				emitter['_internalPromiseMap'].delete(promiseId);
+			});
+		}
+	} catch (err) {
+		emitter.emit('error', err);
 	}
 }

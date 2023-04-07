@@ -1,4 +1,4 @@
-# Certain parts of this code are from node.js, specifically from https://github.com/nodejs/node/blob/main/lib/events.js
+# Most parts of this code are from node.js, specifically from https://github.com/nodejs/node/blob/main/lib/events.js
 
 As such, a lot of the code is licensed under the following license:
 
