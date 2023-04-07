@@ -1,6 +1,6 @@
 {
 	"name": "@vladfrangu/async_event_emitter",
-	"version": "2.1.4",
+	"version": "2.2.0",
 	"description": "An event emitter implementation with async support in mind",
 	"main": "./dist/index.js",
 	"module": "./dist/index.mjs",

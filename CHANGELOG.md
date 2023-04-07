@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+# [2.2.0](https://github.com/vladfrangu/async_event_emitter/compare/v2.1.4...v2.2.0) - (2023-04-07)
+
+## 🚀 Features
+
+- Speed 🚀 ([23eb908](https://github.com/vladfrangu/async_event_emitter/commit/23eb90852ff8a6ceb4d6105c6df44c646642efae))
+
 # [2.1.4](https://github.com/vladfrangu/async_event_emitter/compare/v2.1.3...v2.1.4) - (2023-02-18)
 
 ## 🐛 Bug Fixes
