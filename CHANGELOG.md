@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+# [2.2.1](https://github.com/vladfrangu/async_event_emitter/compare/v2.2.0...v2.2.1) - (2023-04-08)
+
+## 🐛 Bug Fixes
+
+- Include comment for throwing error on emit ([19de045](https://github.com/vladfrangu/async_event_emitter/commit/19de0452702a0d9e35e9241259d100ca6d6f5447))
+
 # [2.2.0](https://github.com/vladfrangu/async_event_emitter/compare/v2.1.4...v2.2.0) - (2023-04-07)
 
 ## 🚀 Features
