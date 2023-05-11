@@ -376,7 +376,19 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 	}
 
 	public listenerCount<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(eventName: K): number {
-		return this._eventCount > 0 ? this._events[eventName]?.length ?? 0 : 0;
+		const events = this._events;
+
+		if (events === undefined) {
+			return 0;
+		}
+
+		const eventListeners = events[eventName];
+
+		if (typeof eventListeners === 'function') {
+			return 1;
+		}
+
+		return eventListeners?.length ?? 0;
 	}
 
 	public prependListener<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
@@ -494,7 +506,7 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 		EventNames = Emitter extends AsyncEventEmitter<infer Events> ? Events : never,
 		EventName extends PropertyKey = EventNames extends never ? string | symbol : keyof EventNames
 	>(emitter: Emitter, eventName: EventName | keyof AsyncEventEmitterPredefinedEvents) {
-		return emitter._eventCount > 0 ? emitter._events[eventName]?.length ?? 0 : 0;
+		return emitter.listenerCount(eventName);
 	}
 
 	public static async once<
