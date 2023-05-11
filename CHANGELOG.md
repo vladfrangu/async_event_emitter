@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+# [2.2.2](https://github.com/vladfrangu/async_event_emitter/compare/v2.2.1...v2.2.2) - (2023-05-11)
+
+## 🐛 Bug Fixes
+
+- Listener count was always 0 for one listener ([9b78e19](https://github.com/vladfrangu/async_event_emitter/commit/9b78e1992db649004dee852359240b3d0baaac2d))
+
 # [2.2.1](https://github.com/vladfrangu/async_event_emitter/compare/v2.2.0...v2.2.1) - (2023-04-08)
 
 ## 🐛 Bug Fixes
