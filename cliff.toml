@@ -1,36 +1,36 @@
 [changelog]
 header = """
 # Changelog
+
 All notable changes to this project will be documented in this file.\n
 """
 body = """
 {% if version %}\
-    # [{{ version | trim_start_matches(pat="v") }}]\
-    {% if previous %}\
-        {% if previous.version %}\
-            (https://github.com/vladfrangu/async_event_emitter/compare/{{ previous.version }}...{{ version }})\
-        {% else %}\
-            (https://github.com/vladfrangu/async_event_emitter/tree/{{ version }})\
-        {% endif %}\
-    {% endif %} \
-    - ({{ timestamp | date(format="%Y-%m-%d") }})
+	# [{{ version | trim_start_matches(pat="v") }}]\
+	{% if previous %}\
+		{% if previous.version %}\
+			(https://github.com/vladfrangu/async_event_emitter/compare/{{ previous.version }}...{{ version }})\
+		{% else %}\
+			(https://github.com/vladfrangu/async_event_emitter/tree/{{ version }})\
+		{% endif %}\
+	{% endif %} \
+	- ({{ timestamp | date(format="%Y-%m-%d") }})
 {% else %}\
-    # [unreleased]
+	# [unreleased]
 {% endif %}\
 {% for group, commits in commits | group_by(attribute="group") %}
-    ## {{ group | upper_first }}
-    {% for commit in commits %}
+	## {{ group | upper_first }}
+	{% for commit in commits %}
 		- {% if commit.scope %}\
 			**{{commit.scope}}:** \
-		  {% endif %}\
-            {{ commit.message | upper_first }} ([{{ commit.id | truncate(length=7, end="") }}](https://github.com/vladfrangu/async_event_emitter/commit/{{ commit.id }}))\
+		{% endif %}\
+			{{ commit.message | upper_first }} ([{{ commit.id | truncate(length=7, end="") }}](https://github.com/vladfrangu/async_event_emitter/commit/{{ commit.id }}))\
 		{% if commit.breaking %}\
-			\n\n {% raw %}  {% endraw %} ### 💥 Breaking Changes:\n \
 			{% for breakingChange in commit.footers %}\
-				{% raw %}  {% endraw %} - {{ breakingChange }}\n\
+				\n{% raw %}  {% endraw %}- 💥 **{{ breakingChange.token }}{{ breakingChange.separator }}** {{ breakingChange.value }}\
 			{% endfor %}\
 		{% endif %}\
-    {% endfor %}
+	{% endfor %}
 {% endfor %}\n
 """
 trim = true
