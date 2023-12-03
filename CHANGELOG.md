@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+# [2.2.4](https://github.com/vladfrangu/async_event_emitter/compare/v2.2.4...v2.2.4) - (2023-12-03)
+
+## 🐛 Bug Fixes
+
+- Correct import of CJS version in package.json (#3) ([8dc308c](https://github.com/vladfrangu/async_event_emitter/commit/8dc308c43fdf9a024a7d48e7219d75e4c9f597dd))
+
 # [2.2.2](https://github.com/vladfrangu/async_event_emitter/compare/v2.2.1...v2.2.2) - (2023-05-11)
 
 ## 🐛 Bug Fixes
