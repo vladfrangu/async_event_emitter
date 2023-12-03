@@ -8,6 +8,7 @@ function validateListener(input: unknown): asserts input is (...args: unknown[])
 function validateAbortSignal(input: unknown): asserts input is AbortSignal | undefined {
 	// Only validate that the signal is a signal if its defined
 	if (input && !(input instanceof AbortSignal)) {
+		// eslint-disable-next-line @typescript-eslint/no-base-to-string
 		throw new TypeError(`The signal option must be an AbortSignal. Received ${input}`);
 	}
 }
@@ -90,19 +91,23 @@ interface InternalEventMap extends Array<Listener | WrappedOnce> {
 	_hasWarnedAboutMaxListeners?: boolean;
 }
 
-export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = Record<PropertyKey, unknown[]> & AsyncEventEmitterPredefinedEvents> {
-	private _events: Record<keyof Events | keyof AsyncEventEmitterPredefinedEvents, Listener | WrappedOnce | InternalEventMap> = {
+export class AsyncEventEmitter<
+	// eslint-disable-next-line @typescript-eslint/ban-types
+	Events extends {} = Record<PropertyKey, unknown[]> & AsyncEventEmitterPredefinedEvents,
+	_Events extends Record<PropertyKey, unknown[]> = Events
+> {
+	private _events: Record<keyof _Events | keyof AsyncEventEmitterPredefinedEvents, Listener | WrappedOnce | InternalEventMap> = {
 		__proto__: null
-	} as Record<keyof Events | keyof AsyncEventEmitterPredefinedEvents, Listener | WrappedOnce | InternalEventMap>;
+	} as Record<keyof _Events | keyof AsyncEventEmitterPredefinedEvents, Listener | WrappedOnce | InternalEventMap>;
 
 	private _eventCount = 0;
 	private _maxListeners = 10;
 	private _internalPromiseMap: Map<string, Promise<void>> = new Map();
 	private _wrapperId = 0n;
 
-	public addListener<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
+	public addListener<K extends keyof _Events | keyof AsyncEventEmitterPredefinedEvents>(
 		eventName: K,
-		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : Events[K]) => void
+		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : _Events[K]) => void
 	): this {
 		validateListener(listener);
 
@@ -113,16 +118,16 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 		return this;
 	}
 
-	public on<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
+	public on<K extends keyof _Events | keyof AsyncEventEmitterPredefinedEvents>(
 		eventName: K,
-		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : Events[K]) => void
+		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : _Events[K]) => void
 	): this {
 		return this.addListener(eventName, listener);
 	}
 
-	public once<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
+	public once<K extends keyof _Events | keyof AsyncEventEmitterPredefinedEvents>(
 		eventName: K,
-		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : Events[K]) => void
+		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : _Events[K]) => void
 	): this {
 		validateListener(listener);
 
@@ -133,9 +138,9 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 		return this;
 	}
 
-	public removeListener<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
+	public removeListener<K extends keyof _Events | keyof AsyncEventEmitterPredefinedEvents>(
 		eventName: K,
-		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : Events[K]) => void
+		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : _Events[K]) => void
 	): this {
 		validateListener(listener);
 
@@ -149,7 +154,7 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 		if (eventList === listener || (eventList as WrappedOnce).listener === listener) {
 			if (--this._eventCount === 0) {
 				this._events = { __proto__: null } as Record<
-					keyof Events | keyof AsyncEventEmitterPredefinedEvents,
+					keyof _Events | keyof AsyncEventEmitterPredefinedEvents,
 					Listener | WrappedOnce | InternalEventMap
 				>;
 			} else {
@@ -192,24 +197,24 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 		return this;
 	}
 
-	public off<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
+	public off<K extends keyof _Events | keyof AsyncEventEmitterPredefinedEvents>(
 		eventName: K,
-		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : Events[K]) => void
+		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : _Events[K]) => void
 	): this {
 		return this.removeListener(eventName, listener);
 	}
 
-	public removeAllListeners<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(event?: K | undefined): this {
+	public removeAllListeners<K extends keyof _Events | keyof AsyncEventEmitterPredefinedEvents>(event?: K | undefined): this {
 		const events = this._events;
 
 		// Not listening for removeListener, no need to emit
 		if (events.removeListener === undefined) {
 			if (!event) {
-				this._events = { __proto__: null } as Record<keyof Events | keyof AsyncEventEmitterPredefinedEvents, InternalEventMap>;
+				this._events = { __proto__: null } as Record<keyof _Events | keyof AsyncEventEmitterPredefinedEvents, InternalEventMap>;
 				this._eventCount = 0;
 			} else if (events[event] !== undefined) {
 				if (--this._eventCount === 0) {
-					this._events = { __proto__: null } as Record<keyof Events | keyof AsyncEventEmitterPredefinedEvents, InternalEventMap>;
+					this._events = { __proto__: null } as Record<keyof _Events | keyof AsyncEventEmitterPredefinedEvents, InternalEventMap>;
 				} else {
 					delete events[event];
 				}
@@ -228,7 +233,7 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 			}
 
 			this.removeAllListeners('removeListener');
-			this._events = { __proto__: null } as Record<keyof Events | keyof AsyncEventEmitterPredefinedEvents, InternalEventMap>;
+			this._events = { __proto__: null } as Record<keyof _Events | keyof AsyncEventEmitterPredefinedEvents, InternalEventMap>;
 			this._eventCount = 0;
 
 			return this;
@@ -262,7 +267,7 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 		return this._maxListeners;
 	}
 
-	public listeners<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(eventName: K): Listener<Events[keyof Events]>['listener'][] {
+	public listeners<K extends keyof _Events | keyof AsyncEventEmitterPredefinedEvents>(eventName: K): Listener<_Events[keyof Events]>['listener'][] {
 		const eventList = this._events[eventName];
 
 		if (eventList === undefined) {
@@ -273,7 +278,7 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 			return [eventList.listener ?? eventList];
 		}
 
-		const ret = arrayClone(eventList) as Listener<Events[keyof Events]>['listener'][];
+		const ret = arrayClone(eventList) as Listener<_Events[keyof Events]>['listener'][];
 
 		for (let i = 0; i < ret.length; ++i) {
 			const orig = (ret[i] as WrappedOnce).listener;
@@ -285,7 +290,7 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 		return ret;
 	}
 
-	public rawListeners<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(eventName: K): Listener<Events[keyof Events]>[] {
+	public rawListeners<K extends keyof _Events | keyof AsyncEventEmitterPredefinedEvents>(eventName: K): Listener<_Events[keyof Events]>[] {
 		const eventList = this._events[eventName];
 
 		if (eventList === undefined) {
@@ -296,12 +301,12 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 			return [eventList];
 		}
 
-		return arrayClone(eventList) as Listener<Events[keyof Events]>[];
+		return arrayClone(eventList) as Listener<_Events[keyof Events]>[];
 	}
 
-	public emit<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
+	public emit<K extends keyof _Events | keyof AsyncEventEmitterPredefinedEvents>(
 		eventName: K,
-		...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : Events[K]
+		...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : _Events[K]
 	): boolean {
 		let doError = eventName === 'error';
 
@@ -375,7 +380,7 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 		return true;
 	}
 
-	public listenerCount<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(eventName: K): number {
+	public listenerCount<K extends keyof _Events | keyof AsyncEventEmitterPredefinedEvents>(eventName: K): number {
 		const events = this._events;
 
 		if (events === undefined) {
@@ -391,9 +396,9 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 		return eventListeners?.length ?? 0;
 	}
 
-	public prependListener<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
+	public prependListener<K extends keyof _Events | keyof AsyncEventEmitterPredefinedEvents>(
 		eventName: K,
-		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : Events[K]) => void
+		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : _Events[K]) => void
 	): this {
 		validateListener(listener);
 
@@ -404,9 +409,9 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 		return this;
 	}
 
-	public prependOnceListener<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
+	public prependOnceListener<K extends keyof _Events | keyof AsyncEventEmitterPredefinedEvents>(
 		eventName: K,
-		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : Events[K]) => void
+		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : _Events[K]) => void
 	): this {
 		validateListener(listener);
 
@@ -417,7 +422,7 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 		return this;
 	}
 
-	public eventNames(): (keyof Events | keyof AsyncEventEmitterPredefinedEvents)[] {
+	public eventNames(): (keyof _Events | keyof AsyncEventEmitterPredefinedEvents)[] {
 		return this._eventCount > 0 ? Reflect.ownKeys(this._events) : [];
 	}
 
@@ -433,7 +438,7 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 		return true;
 	}
 
-	private _addListener<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
+	private _addListener<K extends keyof _Events | keyof AsyncEventEmitterPredefinedEvents>(
 		eventName: K,
 		wrappedListener: Listener | WrappedOnce,
 		prepend: boolean
@@ -473,9 +478,9 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 		}
 	}
 
-	private _wrapListener<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
+	private _wrapListener<K extends keyof _Events | keyof AsyncEventEmitterPredefinedEvents>(
 		eventName: K,
-		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : Events[K]) => Awaitable<void>,
+		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : _Events[K]) => Awaitable<void>,
 		once: boolean
 	): Listener | WrappedOnce {
 		if (!once) {
@@ -488,12 +493,12 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 			eventEmitter: this,
 			eventName,
 			listener
-		} as WrappedOnceState<K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : Events[K]>;
+		} as WrappedOnceState<K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : _Events[K]>;
 
-		const aliased = onceWrapper<K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : Events[K]>;
+		const aliased = onceWrapper<K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : _Events[K]>;
 
 		const wrapped = aliased.bind(state) as WrappedOnce<
-			K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : Events[K]
+			K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : _Events[K]
 		>;
 		wrapped.listener = listener;
 		state.wrapFn = wrapped;
@@ -510,12 +515,16 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 	}
 
 	public static async once<
-		Emitter extends AsyncEventEmitter<any>,
-		EventNames extends Record<PropertyKey, unknown[]> = Emitter extends AsyncEventEmitter<infer Events> ? Events : Record<PropertyKey, unknown[]>,
+		Emitter extends AsyncEventEmitter<any, any>,
+		// eslint-disable-next-line @typescript-eslint/ban-types
+		EventNames extends {} = Emitter extends AsyncEventEmitter<infer Events, any> ? Events : Record<PropertyKey, unknown[]>,
 		EventName extends PropertyKey = keyof EventNames | keyof AsyncEventEmitterPredefinedEvents,
-		EventResult extends unknown[] = EventName extends keyof AsyncEventEmitterPredefinedEvents
-			? AsyncEventEmitterPredefinedEvents[EventName]
-			: EventNames[EventName]
+		// @ts-expect-error Can't believe it, but this works even tho TS is complaining
+		EventResult extends unknown[] = EventNames extends keyof AsyncEventEmitterPredefinedEvents
+			? // @ts-expect-error Can't believe it, but this works even tho TS is complaining
+			  AsyncEventEmitterPredefinedEvents[EventName]
+			: // @ts-expect-error Can't believe it, but this works even tho TS is complaining
+			  EventNames[EventName]
 	>(emitter: Emitter, eventName: EventName, options: AbortableMethods = {}) {
 		const signal = options?.signal;
 		validateAbortSignal(signal);
@@ -563,12 +572,16 @@ export class AsyncEventEmitter<Events extends Record<PropertyKey, unknown[]> = R
 	}
 
 	public static on<
-		Emitter extends AsyncEventEmitter<any>,
-		EventNames extends Record<PropertyKey, unknown[]> = Emitter extends AsyncEventEmitter<infer Events> ? Events : Record<PropertyKey, unknown[]>,
+		Emitter extends AsyncEventEmitter<any, any>,
+		// eslint-disable-next-line @typescript-eslint/ban-types
+		EventNames extends {} = Emitter extends AsyncEventEmitter<infer Events, any> ? Events : Record<PropertyKey, unknown[]>,
 		EventName extends PropertyKey = keyof EventNames | keyof AsyncEventEmitterPredefinedEvents,
-		EventResult extends unknown[] = EventName extends keyof AsyncEventEmitterPredefinedEvents
-			? AsyncEventEmitterPredefinedEvents[EventName]
-			: EventNames[EventName]
+		// @ts-expect-error Can't believe it, but this works even tho TS is complaining
+		EventResult extends unknown[] = EventNames extends keyof AsyncEventEmitterPredefinedEvents
+			? // @ts-expect-error Can't believe it, but this works even tho TS is complaining
+			  AsyncEventEmitterPredefinedEvents[EventName]
+			: // @ts-expect-error Can't believe it, but this works even tho TS is complaining
+			  EventNames[EventName]
 	>(emitter: Emitter, eventName: EventName, options: AbortableMethods = {}): AsyncGenerator<EventResult, void> {
 		const signal = options?.signal;
 		validateAbortSignal(signal);

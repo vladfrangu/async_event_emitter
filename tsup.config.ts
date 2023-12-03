@@ -1,18 +1,29 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { defineConfig } from 'tsup';
+import { Options, defineConfig } from 'tsup';
 
-export default defineConfig({
-	clean: true,
-	dts: false,
+const sharedConfig: Options = {
 	entry: ['src/index.ts'],
-	format: ['cjs', 'esm', 'iife'],
-	minify: false,
-	skipNodeModulesBundle: true,
-	sourcemap: true,
+	external: [],
+	noExternal: [],
+	platform: 'neutral',
 	target: 'es2020',
-	tsconfig: 'src/tsconfig.json',
+	skipNodeModulesBundle: true,
+	clean: true,
+	shims: true,
+	cjsInterop: true,
+	minify: false,
+	terserOptions: {
+		mangle: false,
+		keep_classnames: true,
+		keep_fnames: true
+	},
+	splitting: false,
 	keepNames: true,
+	dts: true,
+	sourcemap: true,
+	treeshake: false,
+	outDir: 'dist',
 	globalName: 'AsyncEventEmitter',
 	plugins: [
 		{
@@ -36,4 +47,20 @@ export default defineConfig({
 			}
 		}
 	]
-});
+};
+
+export default [
+	defineConfig({
+		...sharedConfig,
+		format: 'cjs',
+		outExtension: () => ({ js: '.cjs' })
+	}),
+	defineConfig({
+		...sharedConfig,
+		format: 'esm'
+	}),
+	defineConfig({
+		...sharedConfig,
+		format: 'iife'
+	})
+];

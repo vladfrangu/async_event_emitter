@@ -1,7 +1,9 @@
 {
-	"extends": "@sapphire/ts-config/extra-strict-without-decorators",
+	"extends": ["@sapphire/ts-config", "@sapphire/ts-config/extra-strict", "@sapphire/ts-config/verbatim"],
 	"compilerOptions": {
 		"target": "ES2020",
+		"module": "ES2020",
+		"moduleResolution": "Bundler",
 		"useDefineForClassFields": false,
 		"emitDecoratorMetadata": false
 	}
