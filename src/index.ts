@@ -516,15 +516,15 @@ export class AsyncEventEmitter<
 
 	public static async once<
 		Emitter extends AsyncEventEmitter<any, any>,
-		// eslint-disable-next-line @typescript-eslint/ban-types
-		EventNames extends {} = Emitter extends AsyncEventEmitter<infer Events, any> ? Events : Record<PropertyKey, unknown[]>,
+		EventNames extends Record<PropertyKey, unknown[]> = Emitter extends AsyncEventEmitter<infer Events, any>
+			? Events
+			: Record<PropertyKey, unknown[]>,
 		EventName extends PropertyKey = keyof EventNames | keyof AsyncEventEmitterPredefinedEvents,
-		// @ts-expect-error Can't believe it, but this works even tho TS is complaining
-		EventResult extends unknown[] = EventNames extends keyof AsyncEventEmitterPredefinedEvents
-			? // @ts-expect-error Can't believe it, but this works even tho TS is complaining
-			  AsyncEventEmitterPredefinedEvents[EventName]
-			: // @ts-expect-error Can't believe it, but this works even tho TS is complaining
-			  EventNames[EventName]
+		EventResult extends unknown[] = EventName extends keyof AsyncEventEmitterPredefinedEvents
+			? AsyncEventEmitterPredefinedEvents[EventName]
+			: EventName extends keyof EventNames
+			  ? EventNames[EventName]
+			  : unknown[]
 	>(emitter: Emitter, eventName: EventName, options: AbortableMethods = {}) {
 		const signal = options?.signal;
 		validateAbortSignal(signal);
@@ -573,15 +573,15 @@ export class AsyncEventEmitter<
 
 	public static on<
 		Emitter extends AsyncEventEmitter<any, any>,
-		// eslint-disable-next-line @typescript-eslint/ban-types
-		EventNames extends {} = Emitter extends AsyncEventEmitter<infer Events, any> ? Events : Record<PropertyKey, unknown[]>,
+		EventNames extends Record<PropertyKey, unknown[]> = Emitter extends AsyncEventEmitter<infer Events, any>
+			? Events
+			: Record<PropertyKey, unknown[]>,
 		EventName extends PropertyKey = keyof EventNames | keyof AsyncEventEmitterPredefinedEvents,
-		// @ts-expect-error Can't believe it, but this works even tho TS is complaining
-		EventResult extends unknown[] = EventNames extends keyof AsyncEventEmitterPredefinedEvents
-			? // @ts-expect-error Can't believe it, but this works even tho TS is complaining
-			  AsyncEventEmitterPredefinedEvents[EventName]
-			: // @ts-expect-error Can't believe it, but this works even tho TS is complaining
-			  EventNames[EventName]
+		EventResult extends unknown[] = EventName extends keyof AsyncEventEmitterPredefinedEvents
+			? AsyncEventEmitterPredefinedEvents[EventName]
+			: EventName extends keyof EventNames
+			  ? EventNames[EventName]
+			  : unknown[]
 	>(emitter: Emitter, eventName: EventName, options: AbortableMethods = {}): AsyncGenerator<EventResult, void> {
 		const signal = options?.signal;
 		validateAbortSignal(signal);
