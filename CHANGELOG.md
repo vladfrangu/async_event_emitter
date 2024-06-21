@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+# [2.3.0](https://github.com/vladfrangu/async_event_emitter/compare/v2.3.0...v2.3.0) - (2024-06-21)
+
+## 🚀 Features
+
+- Cleanup ignore comments ([0f4029e](https://github.com/vladfrangu/async_event_emitter/commit/0f4029e9935373e15073288da1841ffb39cc22d8))
+
 # [2.2.4](https://github.com/vladfrangu/async_event_emitter/compare/v2.2.4...v2.2.4) - (2023-12-03)
 
 ## 🐛 Bug Fixes
