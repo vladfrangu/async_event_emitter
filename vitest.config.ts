@@ -6,10 +6,10 @@ export default defineConfig({
 		coverage: {
 			enabled: true,
 			reporter: ['text', 'lcov', 'clover'],
-			exclude: ['**/node_modules/**', '**/dist/**', '**/tests/**']
-		}
+			include: ['src/**/*.ts'],
+		},
 	},
 	esbuild: {
-		target: 'es2020'
-	}
+		target: 'es2020',
+	},
 });

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/dot-notation */
-function validateListener(input: unknown): asserts input is (...args: unknown[]) => Awaitable<void> {
+function validateListener(input: unknown): asserts input is (...args: unknown[]) => void {
 	if (typeof input !== 'function') {
 		throw new TypeError(`The listener argument must be a function. Received ${typeof input}`);
 	}
@@ -87,28 +87,73 @@ function enhanceStackTrace(this: AsyncEventEmitter<any>, err: Error, own: Error)
 	return err.stack + sep + ownStack.join('\n');
 }
 
-interface InternalEventMap extends Array<Listener | WrappedOnce> {
+interface InternalEventMap extends Array<Listener> {
 	_hasWarnedAboutMaxListeners?: boolean;
 }
 
+type InternalGetAsyncEventEmitterEventParameters<
+	EE extends AsyncEventEmitter<any>,
+	EventName extends PropertyKey,
+	Events extends Record<PropertyKey, unknown[]> = EE extends AsyncEventEmitter<infer Events> ? Events
+	:	Record<PropertyKey, unknown[]>,
+> =
+	EventName extends keyof AsyncEventEmitterPredefinedEvents ?
+		EventName extends keyof Events ?
+			AsyncEventEmitterPredefinedEvents[EventName] | (Events & Record<PropertyKey, unknown[]>)[EventName]
+		:	AsyncEventEmitterPredefinedEvents[EventName]
+	: EventName extends keyof Events ? (Events & Record<PropertyKey, unknown[]>)[EventName]
+	: any[];
+
+export type GetAsyncEventEmitterEventParameters<
+	EE extends AsyncEventEmitter<any>,
+	EventName extends PropertyKey | keyof AsyncEventEmitterPredefinedEvents,
+> = InternalGetAsyncEventEmitterEventParameters<EE, EventName>;
+
+type InternalAsyncEventEmitterInternalListenerForEvent<
+	EE extends AsyncEventEmitter<any>,
+	EventName extends PropertyKey,
+	Events extends Record<PropertyKey, unknown[]> = EE extends AsyncEventEmitter<infer Events> ? Events
+	:	Record<PropertyKey, unknown[]>,
+> =
+	EventName extends keyof AsyncEventEmitterPredefinedEvents ?
+		EventName extends keyof Events ?
+			Listener<
+				AsyncEventEmitterPredefinedEvents[EventName] | (Events & Record<PropertyKey, unknown[]>)[EventName]
+			>
+		:	Listener<AsyncEventEmitterPredefinedEvents[EventName]>
+	: EventName extends keyof Events ? Listener<(Events & Record<PropertyKey, unknown[]>)[EventName]>
+	: Listener<any[]>;
+
+export type AsyncEventEmitterInternalListenerForEvent<
+	EE extends AsyncEventEmitter<any>,
+	EventName extends PropertyKey | keyof AsyncEventEmitterPredefinedEvents,
+> = InternalAsyncEventEmitterInternalListenerForEvent<EE, EventName>;
+
+export type AsyncEventEmitterListenerForEvent<
+	EE extends AsyncEventEmitter<any>,
+	EventName extends PropertyKey | keyof AsyncEventEmitterPredefinedEvents,
+> = Exclude<AsyncEventEmitterInternalListenerForEvent<EE, EventName>['listener'], undefined>;
+
 export class AsyncEventEmitter<
 	// eslint-disable-next-line @typescript-eslint/ban-types
-	Events extends {} = Record<PropertyKey, unknown[]> & AsyncEventEmitterPredefinedEvents,
-	_Events extends Record<PropertyKey, unknown[]> = Events
+	Events extends {} = {},
 > {
-	private _events: Record<keyof _Events | keyof AsyncEventEmitterPredefinedEvents, Listener | WrappedOnce | InternalEventMap> = {
-		__proto__: null
-	} as Record<keyof _Events | keyof AsyncEventEmitterPredefinedEvents, Listener | WrappedOnce | InternalEventMap>;
+	private _events: Record<string | symbol, Listener | InternalEventMap> = {
+		__proto__: null,
+	} as Record<keyof Events | keyof AsyncEventEmitterPredefinedEvents, Listener | InternalEventMap>;
 
 	private _eventCount = 0;
 	private _maxListeners = 10;
 	private _internalPromiseMap: Map<string, Promise<void>> = new Map();
 	private _wrapperId = 0n;
 
-	public addListener<K extends keyof _Events | keyof AsyncEventEmitterPredefinedEvents>(
+	public addListener<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
 		eventName: K,
-		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : _Events[K]) => void
-	): this {
+		listener: AsyncEventEmitterListenerForEvent<AsyncEventEmitter<Events>, K>,
+	): this;
+
+	public addListener(eventName: string | symbol, listener: (...args: any[]) => void): this;
+	public addListener(eventName: string | symbol, listener: (...args: any[]) => void) {
 		validateListener(listener);
 
 		const wrapped = this._wrapListener(eventName, listener, false);
@@ -118,17 +163,24 @@ export class AsyncEventEmitter<
 		return this;
 	}
 
-	public on<K extends keyof _Events | keyof AsyncEventEmitterPredefinedEvents>(
+	public on<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
 		eventName: K,
-		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : _Events[K]) => void
-	): this {
+		listener: AsyncEventEmitterListenerForEvent<AsyncEventEmitter<Events>, K>,
+	): this;
+
+	public on(eventName: string | symbol, listener: (...args: any[]) => void): this;
+	public on(eventName: string | symbol, listener: (...args: any[]) => void) {
 		return this.addListener(eventName, listener);
 	}
 
-	public once<K extends keyof _Events | keyof AsyncEventEmitterPredefinedEvents>(
+	public once<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
 		eventName: K,
-		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : _Events[K]) => void
-	): this {
+		listener: AsyncEventEmitterListenerForEvent<AsyncEventEmitter<Events>, K>,
+	): this;
+
+	public once(eventName: string | symbol, listener: (...args: any[]) => void): this;
+
+	public once(eventName: string | symbol, listener: (...args: any[]) => void): this {
 		validateListener(listener);
 
 		const wrapped = this._wrapListener(eventName, listener, true);
@@ -138,10 +190,14 @@ export class AsyncEventEmitter<
 		return this;
 	}
 
-	public removeListener<K extends keyof _Events | keyof AsyncEventEmitterPredefinedEvents>(
+	public removeListener<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
 		eventName: K,
-		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : _Events[K]) => void
-	): this {
+		listener: AsyncEventEmitterListenerForEvent<AsyncEventEmitter<Events>, K>,
+	): this;
+
+	public removeListener(eventName: string | symbol, listener: (...args: any[]) => void): this;
+
+	public removeListener(eventName: string | symbol, listener: (...args: any[]) => void): this {
 		validateListener(listener);
 
 		const events = this._events;
@@ -151,23 +207,27 @@ export class AsyncEventEmitter<
 			return this;
 		}
 
-		if (eventList === listener || (eventList as WrappedOnce).listener === listener) {
+		if (eventList === listener || (eventList as Listener).listener === listener) {
 			if (--this._eventCount === 0) {
 				this._events = { __proto__: null } as Record<
-					keyof _Events | keyof AsyncEventEmitterPredefinedEvents,
-					Listener | WrappedOnce | InternalEventMap
+					keyof Events | keyof AsyncEventEmitterPredefinedEvents,
+					Listener | InternalEventMap
 				>;
 			} else {
 				delete events[eventName];
 				if (events.removeListener) {
-					this.emit('removeListener', eventName as string, (eventList as WrappedOnce).listener ?? eventList);
+					this.emit(
+						'removeListener',
+						eventName as string,
+						((eventList as Listener).listener ?? eventList) as (...args: any[]) => void,
+					);
 				}
 			}
 		} else if (typeof eventList !== 'function') {
 			let position = -1;
 
 			for (let i = eventList.length - 1; i >= 0; i--) {
-				if (eventList[i] === listener || (eventList[i] as WrappedOnce).listener === listener) {
+				if (eventList[i] === listener || (eventList[i] as Listener).listener === listener) {
 					position = i;
 					break;
 				}
@@ -189,32 +249,51 @@ export class AsyncEventEmitter<
 			}
 
 			if (events.removeListener !== undefined) {
-				// Thanks TypeScript for the cast...
-				this.emit('removeListener', eventName as string | symbol, listener);
+				this.emit('removeListener', eventName, listener);
 			}
 		}
 
 		return this;
 	}
 
-	public off<K extends keyof _Events | keyof AsyncEventEmitterPredefinedEvents>(
+	public off<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
 		eventName: K,
-		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : _Events[K]) => void
-	): this {
+		listener: AsyncEventEmitterListenerForEvent<AsyncEventEmitter<Events>, K>,
+	): this;
+
+	public off(eventName: string | symbol, listener: (...args: any[]) => void): this;
+
+	public off(eventName: string | symbol, listener: (...args: any[]) => void): this {
 		return this.removeListener(eventName, listener);
 	}
 
-	public removeAllListeners<K extends keyof _Events | keyof AsyncEventEmitterPredefinedEvents>(event?: K | undefined): this {
+	public removeAllListeners<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(event: K): this;
+
+	public removeAllListeners<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
+		event?: K | undefined,
+	): this;
+
+	public removeAllListeners(event: string | symbol): this;
+
+	public removeAllListeners(event?: string | symbol | undefined): this;
+
+	public removeAllListeners(event?: string | symbol | undefined): this {
 		const events = this._events;
 
 		// Not listening for removeListener, no need to emit
 		if (events.removeListener === undefined) {
 			if (!event) {
-				this._events = { __proto__: null } as Record<keyof _Events | keyof AsyncEventEmitterPredefinedEvents, InternalEventMap>;
+				this._events = { __proto__: null } as Record<
+					keyof Events | keyof AsyncEventEmitterPredefinedEvents,
+					InternalEventMap
+				>;
 				this._eventCount = 0;
 			} else if (events[event] !== undefined) {
 				if (--this._eventCount === 0) {
-					this._events = { __proto__: null } as Record<keyof _Events | keyof AsyncEventEmitterPredefinedEvents, InternalEventMap>;
+					this._events = { __proto__: null } as Record<
+						keyof Events | keyof AsyncEventEmitterPredefinedEvents,
+						InternalEventMap
+					>;
 				} else {
 					delete events[event];
 				}
@@ -225,7 +304,7 @@ export class AsyncEventEmitter<
 
 		// Emit removeListener for all listeners on all events
 		if (!event) {
-			for (const key of Reflect.ownKeys(events)) {
+			for (const key of Reflect.ownKeys(events) as (keyof Events | keyof AsyncEventEmitterPredefinedEvents)[]) {
 				if (key === 'removeListener') {
 					continue;
 				}
@@ -233,7 +312,10 @@ export class AsyncEventEmitter<
 			}
 
 			this.removeAllListeners('removeListener');
-			this._events = { __proto__: null } as Record<keyof _Events | keyof AsyncEventEmitterPredefinedEvents, InternalEventMap>;
+			this._events = { __proto__: null } as Record<
+				keyof Events | keyof AsyncEventEmitterPredefinedEvents,
+				InternalEventMap
+			>;
 			this._eventCount = 0;
 
 			return this;
@@ -267,7 +349,13 @@ export class AsyncEventEmitter<
 		return this._maxListeners;
 	}
 
-	public listeners<K extends keyof _Events | keyof AsyncEventEmitterPredefinedEvents>(eventName: K): Listener<_Events[keyof Events]>['listener'][] {
+	public listeners<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
+		eventName: K,
+	): AsyncEventEmitterListenerForEvent<AsyncEventEmitter<Events>, K>[];
+
+	public listeners(eventName: string | symbol): ((...args: any[]) => void)[];
+
+	public listeners(eventName: string | symbol): ((...args: any[]) => void)[] {
 		const eventList = this._events[eventName];
 
 		if (eventList === undefined) {
@@ -278,10 +366,10 @@ export class AsyncEventEmitter<
 			return [eventList.listener ?? eventList];
 		}
 
-		const ret = arrayClone(eventList) as Listener<_Events[keyof Events]>['listener'][];
+		const ret = arrayClone(eventList) as ((...args: any[]) => void)[];
 
 		for (let i = 0; i < ret.length; ++i) {
-			const orig = (ret[i] as WrappedOnce).listener;
+			const orig = (ret[i] as Listener).listener;
 			if (typeof orig === 'function') {
 				ret[i] = orig;
 			}
@@ -290,7 +378,13 @@ export class AsyncEventEmitter<
 		return ret;
 	}
 
-	public rawListeners<K extends keyof _Events | keyof AsyncEventEmitterPredefinedEvents>(eventName: K): Listener<_Events[keyof Events]>[] {
+	public rawListeners<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
+		eventName: K,
+	): AsyncEventEmitterInternalListenerForEvent<AsyncEventEmitter<Events>, K>[];
+
+	public rawListeners(eventName: string | symbol): Listener[];
+
+	public rawListeners(eventName: string | symbol): Listener[] {
 		const eventList = this._events[eventName];
 
 		if (eventList === undefined) {
@@ -301,18 +395,22 @@ export class AsyncEventEmitter<
 			return [eventList];
 		}
 
-		return arrayClone(eventList) as Listener<_Events[keyof Events]>[];
+		return arrayClone(eventList);
 	}
 
-	public emit<K extends keyof _Events | keyof AsyncEventEmitterPredefinedEvents>(
+	public emit<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
 		eventName: K,
-		...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : _Events[K]
-	): boolean {
+		...args: GetAsyncEventEmitterEventParameters<AsyncEventEmitter<Events>, K>
+	): boolean;
+
+	public emit(eventName: string | symbol, ...args: any[]): boolean;
+
+	public emit(eventName: string | symbol, ...args: any[]): boolean {
 		let doError = eventName === 'error';
 
 		const events = this._events;
 		if (events !== undefined) {
-			doError = doError && events.error === undefined;
+			doError = doError && 'error' in events;
 		} else if (!doError) {
 			return false;
 		}
@@ -332,7 +430,7 @@ export class AsyncEventEmitter<
 					Error.captureStackTrace(capture, AsyncEventEmitter.prototype.emit);
 					Object.defineProperty(er, 'stack', {
 						value: enhanceStackTrace.call(this, er, capture as Error),
-						configurable: true
+						configurable: true,
 					});
 				} catch {
 					// Continue regardless of error
@@ -380,7 +478,11 @@ export class AsyncEventEmitter<
 		return true;
 	}
 
-	public listenerCount<K extends keyof _Events | keyof AsyncEventEmitterPredefinedEvents>(eventName: K): number {
+	public listenerCount<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(eventName: K): number;
+
+	public listenerCount(eventName: string | symbol): number;
+
+	public listenerCount(eventName: string | symbol): number {
 		const events = this._events;
 
 		if (events === undefined) {
@@ -396,10 +498,14 @@ export class AsyncEventEmitter<
 		return eventListeners?.length ?? 0;
 	}
 
-	public prependListener<K extends keyof _Events | keyof AsyncEventEmitterPredefinedEvents>(
+	public prependListener<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
 		eventName: K,
-		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : _Events[K]) => void
-	): this {
+		listener: AsyncEventEmitterListenerForEvent<AsyncEventEmitter<Events>, K>,
+	): this;
+
+	public prependListener(eventName: string | symbol, listener: (...args: any[]) => void): this;
+
+	public prependListener(eventName: string | symbol, listener: (...args: any[]) => void): this {
 		validateListener(listener);
 
 		const wrapped = this._wrapListener(eventName, listener, false);
@@ -409,10 +515,14 @@ export class AsyncEventEmitter<
 		return this;
 	}
 
-	public prependOnceListener<K extends keyof _Events | keyof AsyncEventEmitterPredefinedEvents>(
+	public prependOnceListener<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
 		eventName: K,
-		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : _Events[K]) => void
-	): this {
+		listener: AsyncEventEmitterListenerForEvent<AsyncEventEmitter<Events>, K>,
+	): this;
+
+	public prependOnceListener(eventName: string | symbol, listener: (...args: any[]) => void): this;
+
+	public prependOnceListener(eventName: string | symbol, listener: (...args: any[]) => void): this {
 		validateListener(listener);
 
 		const wrapped = this._wrapListener(eventName, listener, true);
@@ -422,8 +532,12 @@ export class AsyncEventEmitter<
 		return this;
 	}
 
-	public eventNames(): (keyof _Events | keyof AsyncEventEmitterPredefinedEvents)[] {
-		return this._eventCount > 0 ? Reflect.ownKeys(this._events) : [];
+	public eventNames(): (string | symbol)[] & (keyof AsyncEventEmitterPredefinedEvents)[] & (keyof Events)[] {
+		return this._eventCount > 0 ?
+				(Reflect.ownKeys(this._events) as (string | symbol)[] &
+					(keyof AsyncEventEmitterPredefinedEvents)[] &
+					(keyof Events)[])
+			:	[];
 	}
 
 	public async waitForAllListenersToComplete() {
@@ -438,15 +552,15 @@ export class AsyncEventEmitter<
 		return true;
 	}
 
-	private _addListener<K extends keyof _Events | keyof AsyncEventEmitterPredefinedEvents>(
-		eventName: K,
-		wrappedListener: Listener | WrappedOnce,
-		prepend: boolean
-	) {
+	private _addListener(eventName: PropertyKey, wrappedListener: Listener, prepend: boolean) {
 		// Emit newListener first in the event someone is listening for it
 		if (this._events.newListener !== undefined) {
-			// Thanks TypeScript for the cast...
-			this.emit('newListener', eventName as string | symbol, (wrappedListener as WrappedOnce).listener ?? wrappedListener);
+			// Thanks TypeScript for the cast... now with more what the fuck
+			this.emit(
+				'newListener',
+				eventName as string | symbol,
+				((wrappedListener as Listener).listener ?? wrappedListener) as (...args: any[]) => void,
+			);
 		}
 
 		let existing = this._events[eventName];
@@ -466,23 +580,21 @@ export class AsyncEventEmitter<
 			existing.push(wrappedListener);
 		}
 
-		if (this._maxListeners > 0 && existing.length > this._maxListeners && !existing._hasWarnedAboutMaxListeners) {
-			existing._hasWarnedAboutMaxListeners = true;
+		const existingWarnedAboutMaxListeners = Reflect.get(existing, '_hasWarnedAboutMaxListeners') as boolean;
+
+		if (this._maxListeners > 0 && existing.length > this._maxListeners && !existingWarnedAboutMaxListeners) {
+			Reflect.set(existing, '_hasWarnedAboutMaxListeners', true);
 			const warningMessage = [
-				`Possible AsyncEventEmitter memory leak detected. ${existing.length} ${String(eventName)} listeners added to ${
-					this.constructor.name
-				}.`,
-				`Use emitter.setMaxListeners() to increase the limit.`
+				`Possible AsyncEventEmitter memory leak detected. ${existing.length} ${String(
+					eventName,
+				)} listeners added to ${this.constructor.name}.`,
+				`Use emitter.setMaxListeners() to increase the limit.`,
 			].join(' ');
 			console.warn(warningMessage);
 		}
 	}
 
-	private _wrapListener<K extends keyof _Events | keyof AsyncEventEmitterPredefinedEvents>(
-		eventName: K,
-		listener: (...args: K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : _Events[K]) => Awaitable<void>,
-		once: boolean
-	): Listener | WrappedOnce {
+	private _wrapListener(eventName: PropertyKey, listener: (...args: any[]) => void, once: boolean): Listener {
 		if (!once) {
 			return listener as Listener;
 		}
@@ -492,40 +604,66 @@ export class AsyncEventEmitter<
 			wrapFn: undefined!,
 			eventEmitter: this,
 			eventName,
-			listener
-		} as WrappedOnceState<K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : _Events[K]>;
+			listener,
+		} as WrappedOnceState<any[]>;
 
-		const aliased = onceWrapper<K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : _Events[K]>;
+		const aliased = onceWrapper<any[]>;
 
-		const wrapped = aliased.bind(state) as WrappedOnce<
-			K extends keyof AsyncEventEmitterPredefinedEvents ? AsyncEventEmitterPredefinedEvents[K] : _Events[K]
-		>;
-		wrapped.listener = listener;
+		const wrapped = aliased.bind(state) as Listener<any[]>;
+		wrapped.listener = listener as Listener<any[]>;
 		state.wrapFn = wrapped;
 
-		return wrapped as WrappedOnce;
+		return wrapped as Listener;
 	}
 
 	public static listenerCount<
 		Emitter extends AsyncEventEmitter<any>,
 		EventNames = Emitter extends AsyncEventEmitter<infer Events> ? Events : never,
-		EventName extends PropertyKey = EventNames extends never ? string | symbol : keyof EventNames
-	>(emitter: Emitter, eventName: EventName | keyof AsyncEventEmitterPredefinedEvents) {
+		EventName extends PropertyKey = EventNames extends never ? string | symbol : keyof EventNames,
+	>(emitter: Emitter, eventName: EventName | keyof AsyncEventEmitterPredefinedEvents): number;
+
+	public static listenerCount(emitter: AsyncEventEmitter<any>, eventName: string | symbol): number;
+
+	public static listenerCount(emitter: AsyncEventEmitter<any>, eventName: string | symbol) {
 		return emitter.listenerCount(eventName);
 	}
 
 	public static async once<
-		Emitter extends AsyncEventEmitter<any, any>,
-		EventNames extends Record<PropertyKey, unknown[]> = Emitter extends AsyncEventEmitter<infer Events, any>
-			? Events
-			: Record<PropertyKey, unknown[]>,
+		Emitter extends AsyncEventEmitter<any>,
+		EventNames extends Record<PropertyKey, unknown[]> = Emitter extends AsyncEventEmitter<infer Events> ? Events
+		:	Record<PropertyKey, unknown[]>,
 		EventName extends PropertyKey = keyof EventNames | keyof AsyncEventEmitterPredefinedEvents,
-		EventResult extends unknown[] = EventName extends keyof AsyncEventEmitterPredefinedEvents
-			? AsyncEventEmitterPredefinedEvents[EventName]
-			: EventName extends keyof EventNames
-			  ? EventNames[EventName]
-			  : unknown[]
-	>(emitter: Emitter, eventName: EventName, options: AbortableMethods = {}) {
+	>(
+		emitter: Emitter,
+		eventName: EventName,
+		options?: AbortableMethods,
+	): Promise<GetAsyncEventEmitterEventParameters<Emitter, EventName>>;
+
+	public static async once<
+		Emitter extends AsyncEventEmitter<any>,
+		EventNames extends Record<PropertyKey, unknown[]> = Emitter extends AsyncEventEmitter<infer Events> ? Events
+		:	Record<PropertyKey, unknown[]>,
+		EventName extends PropertyKey = keyof EventNames | keyof AsyncEventEmitterPredefinedEvents,
+		EventResult extends unknown[] = GetAsyncEventEmitterEventParameters<Emitter, EventName>,
+	>(emitter: Emitter, eventName: EventName, options: AbortableMethods): Promise<EventResult>;
+
+	public static async once(
+		emitter: AsyncEventEmitter<any>,
+		eventName: string | symbol,
+		options?: AbortableMethods,
+	): Promise<any[]>;
+
+	public static async once(
+		emitter: AsyncEventEmitter<any>,
+		eventName: string | symbol,
+		options: AbortableMethods,
+	): Promise<any[]>;
+
+	public static async once(
+		emitter: AsyncEventEmitter<any>,
+		eventName: string | symbol,
+		options: AbortableMethods = {},
+	) {
 		const signal = options?.signal;
 		validateAbortSignal(signal);
 
@@ -533,7 +671,7 @@ export class AsyncEventEmitter<
 			throw new AbortError(undefined, { cause: getReason(signal) });
 		}
 
-		return new Promise<EventResult>((resolve, reject) => {
+		return new Promise<any[]>((resolve, reject) => {
 			const errorListener = (err: unknown) => {
 				emitter.removeListener(eventName, resolver);
 
@@ -544,14 +682,14 @@ export class AsyncEventEmitter<
 				reject(err);
 			};
 
-			const resolver = (...args: unknown[]) => {
+			const resolver = (...args: any[]) => {
 				emitter.removeListener('error', errorListener);
 
 				if (signal) {
 					eventTargetAgnosticRemoveListener(signal, 'abort', abortListener);
 				}
 
-				resolve(args as EventResult);
+				resolve(args as any[]);
 			};
 
 			emitter.once(eventName, resolver);
@@ -572,17 +710,44 @@ export class AsyncEventEmitter<
 	}
 
 	public static on<
-		Emitter extends AsyncEventEmitter<any, any>,
-		EventNames extends Record<PropertyKey, unknown[]> = Emitter extends AsyncEventEmitter<infer Events, any>
-			? Events
-			: Record<PropertyKey, unknown[]>,
+		Emitter extends AsyncEventEmitter<any>,
+		EventNames extends Record<PropertyKey, unknown[]> = Emitter extends AsyncEventEmitter<infer Events> ? Events
+		:	Record<PropertyKey, unknown[]>,
 		EventName extends PropertyKey = keyof EventNames | keyof AsyncEventEmitterPredefinedEvents,
-		EventResult extends unknown[] = EventName extends keyof AsyncEventEmitterPredefinedEvents
-			? AsyncEventEmitterPredefinedEvents[EventName]
-			: EventName extends keyof EventNames
-			  ? EventNames[EventName]
-			  : unknown[]
-	>(emitter: Emitter, eventName: EventName, options: AbortableMethods = {}): AsyncGenerator<EventResult, void> {
+	>(
+		emitter: Emitter,
+		eventName: EventName,
+		options?: AbortableMethods,
+	): AsyncGenerator<GetAsyncEventEmitterEventParameters<Emitter, EventName>, void>;
+
+	public static on<
+		Emitter extends AsyncEventEmitter<any>,
+		EventNames extends Record<PropertyKey, unknown[]> = Emitter extends AsyncEventEmitter<infer Events> ? Events
+		:	Record<PropertyKey, unknown[]>,
+		EventName extends PropertyKey = keyof EventNames | keyof AsyncEventEmitterPredefinedEvents,
+	>(
+		emitter: Emitter,
+		eventName: EventName,
+		options: AbortableMethods,
+	): AsyncGenerator<GetAsyncEventEmitterEventParameters<Emitter, EventName>, void>;
+
+	public static on(
+		emitter: AsyncEventEmitter<any>,
+		eventName: string | symbol,
+		options?: AbortableMethods,
+	): AsyncGenerator<any[], void>;
+
+	public static on(
+		emitter: AsyncEventEmitter<any>,
+		eventName: string | symbol,
+		options: AbortableMethods,
+	): AsyncGenerator<any[], void>;
+
+	public static on(
+		emitter: AsyncEventEmitter<any>,
+		eventName: string | symbol,
+		options: AbortableMethods = {},
+	): AsyncGenerator<any[], void> {
 		const signal = options?.signal;
 		validateAbortSignal(signal);
 
@@ -622,7 +787,7 @@ export class AsyncEventEmitter<
 			void iterator.return();
 		};
 
-		const iterator: AsyncGenerator<EventResult, void> = Object.setPrototypeOf(
+		const iterator: AsyncGenerator<any[], void> = Object.setPrototypeOf(
 			{
 				next() {
 					// First, we consume all unread events
@@ -672,7 +837,9 @@ export class AsyncEventEmitter<
 
 				throw(err: unknown) {
 					if (!err || !(err instanceof Error)) {
-						throw new TypeError(`Expected Error instance to be thrown in AsyncEventEmitter.AsyncIterator. Got ${err}`);
+						throw new TypeError(
+							`Expected Error instance to be thrown in AsyncEventEmitter.AsyncIterator. Got ${err}`,
+						);
 					}
 
 					error = err;
@@ -682,9 +849,9 @@ export class AsyncEventEmitter<
 
 				[Symbol.asyncIterator]() {
 					return this;
-				}
+				},
 			},
-			AsyncIteratorPrototype
+			AsyncIteratorPrototype,
 		);
 
 		emitter.on(eventName, eventHandler);
@@ -701,31 +868,23 @@ export class AsyncEventEmitter<
 }
 
 export interface AsyncEventEmitterPredefinedEvents {
-	newListener: [eventName: string | symbol, listener: (...args: any[]) => Awaitable<void>];
-	removeListener: [eventName: string | symbol, listener: (...args: any[]) => Awaitable<void>];
+	newListener: [eventName: string | symbol, listener: (...args: any[]) => void];
+	removeListener: [eventName: string | symbol, listener: (...args: any[]) => void];
 }
 
-interface WrappedOnceState<Args extends any[] = any[]> {
-	listener: (...args: Args) => Awaitable<void>;
+interface WrappedOnceState<Args extends unknown[] = unknown[]> {
+	listener: (...args: Args) => void;
 	fired: boolean;
 	eventName: string | symbol;
 	eventEmitter: AsyncEventEmitter<any>;
-	wrapFn: (...args: Args) => Awaitable<void>;
-}
-
-export interface WrappedOnce<Args extends any[] = any[]> {
-	(...args: Args): Awaitable<void>;
-	listener: (...args: Args) => Awaitable<void>;
-	_hasWarnedAboutMaxListeners?: boolean;
+	wrapFn: (...args: Args) => void;
 }
 
 export interface Listener<Args extends any[] = any[]> {
-	(...args: Args): Awaitable<void>;
-	listener: (...args: Args) => Awaitable<void>;
-	_hasWarnedAboutMaxListeners?: boolean;
+	(...args: Args): void;
+	listener?: (...args: Args) => void;
+	// _hasWarnedAboutMaxListeners?: boolean;
 }
-
-export type Awaitable<T> = T | Promise<T>;
 
 export interface AbortableMethods {
 	signal?: AbortSignal;
@@ -755,7 +914,12 @@ function getReason(signal: any) {
 	return signal?.reason;
 }
 
-function eventTargetAgnosticRemoveListener(emitter: any, name: PropertyKey, listener: (...args: unknown[]) => any, flags?: InternalAgnosticFlags) {
+function eventTargetAgnosticRemoveListener(
+	emitter: any,
+	name: PropertyKey,
+	listener: (...args: unknown[]) => any,
+	flags?: InternalAgnosticFlags,
+) {
 	if (typeof emitter.off === 'function') {
 		emitter.off(name, listener);
 	} else if (typeof emitter.removeEventListener === 'function') {
@@ -763,7 +927,12 @@ function eventTargetAgnosticRemoveListener(emitter: any, name: PropertyKey, list
 	}
 }
 
-function eventTargetAgnosticAddListener(emitter: any, name: string | symbol, listener: (...args: unknown[]) => any, flags?: InternalAgnosticFlags) {
+function eventTargetAgnosticAddListener(
+	emitter: any,
+	name: string | symbol,
+	listener: (...args: unknown[]) => any,
+	flags?: InternalAgnosticFlags,
+) {
 	if (typeof emitter.on === 'function') {
 		if (flags?.once) {
 			emitter.once!(name, listener);
@@ -805,7 +974,14 @@ export class AbortError extends Error {
 
 function handleMaybeAsync(emitter: AsyncEventEmitter<any>, result: any) {
 	try {
+		const the = result.then;
 		const fin = result.finally;
+
+		if (typeof the === 'function') {
+			the.call(result, undefined, (error: any) => {
+				emitter.emit('error', error);
+			});
+		}
 
 		if (typeof fin === 'function') {
 			const promiseId = String(++emitter['_wrapperId']);
