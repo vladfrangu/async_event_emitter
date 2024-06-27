@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+# [2.4.0](https://github.com/vladfrangu/async_event_emitter/compare/v2.4.0...v2.4.0) - (2024-06-27)
+
+## 🚀 Features
+
+- Cleaner types, more correct types, the usual ([c1b0f75](https://github.com/vladfrangu/async_event_emitter/commit/c1b0f751f597d9dac5d10870f49f30b8b1dc4908))
+
 # [2.3.0](https://github.com/vladfrangu/async_event_emitter/compare/v2.3.0...v2.3.0) - (2024-06-21)
 
 ## 🚀 Features
