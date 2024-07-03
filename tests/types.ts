@@ -1,4 +1,8 @@
-import { AsyncEventEmitter, type GetAsyncEventEmitterEventParameters } from '../src';
+import {
+	AsyncEventEmitter,
+	type AsyncEventEmitterListenerForEvent,
+	type GetAsyncEventEmitterEventParameters,
+} from '../src';
 
 declare const t: AsyncEventEmitter<{
 	foo: [bar: string];
@@ -58,11 +62,33 @@ t.addListener('unknown', (arg1: 1) => {});
 {
 	t.emit('newListener', 'foo', () => {});
 
+	t.emit('newListener', {});
+
 	t.emit('foo', 'bar');
+
+	t.emit('foo', true);
 
 	t.emit('baz', true, false);
 
 	t.emit('mama mia', 'here we go again');
+}
+
+{
+	const bound = t.emit.bind(t, 'newListener');
+}
+
+{
+	const listener: AsyncEventEmitterListenerForEvent<typeof t, 'foo'> = (bar) => {
+		console.log(bar);
+	};
+
+	const listener2: AsyncEventEmitterListenerForEvent<typeof t, 'newListener'> = (...args) => {
+		console.log(args);
+	};
+
+	t.removeListener('foo', listener);
+
+	t.removeListener('foo', listener2);
 }
 
 {
@@ -74,6 +100,8 @@ t.addListener('unknown', (arg1: 1) => {});
 {
 	const oncePromise1 = AsyncEventEmitter.once(t, 'foo');
 
+	const oncePromise1_1 = AsyncEventEmitter.once(t, 'foo', {});
+
 	const oncePromise2 = AsyncEventEmitter.once(t, 'newListener');
 
 	const oncePromise3 = AsyncEventEmitter.once(t, 'bazzinga');
@@ -81,6 +109,8 @@ t.addListener('unknown', (arg1: 1) => {});
 	void AsyncEventEmitter.once(t, 'removeListener');
 
 	void AsyncEventEmitter.once(t, 'foo');
+
+	void AsyncEventEmitter.once(t, 'no dice');
 }
 
 {
@@ -110,6 +140,8 @@ declare const ee: AsyncEventEmitter;
 
 	const events = ee.eventNames();
 	//    ^?
+
+	events.includes('owo');
 }
 
 interface Events {
