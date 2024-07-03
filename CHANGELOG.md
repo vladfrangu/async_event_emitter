@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+# [2.4.1](https://github.com/vladfrangu/async_event_emitter/compare/v2.4.1...v2.4.1) - (2024-07-03)
+
+## 🐛 Bug Fixes
+
+- Correct strictness of types and overloads for certain methods ([75c7e19](https://github.com/vladfrangu/async_event_emitter/commit/75c7e191ffa65d2cfccf2dda4e4395427fb979f6))
+
 # [2.4.0](https://github.com/vladfrangu/async_event_emitter/compare/v2.4.0...v2.4.0) - (2024-06-27)
 
 ## 🚀 Features
