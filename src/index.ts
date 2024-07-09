@@ -220,7 +220,10 @@ export class AsyncEventEmitter<
 		listener: AsyncEventEmitterListenerForEvent<AsyncEventEmitter<Events>, K>,
 	): this;
 
-	public removeListener(eventName: string | symbol, listener: (...args: any[]) => void): this {
+	public removeListener<K extends string | symbol>(
+		eventName: K,
+		listener: AsyncEventEmitterListenerForEvent<AsyncEventEmitter<Events>, K>,
+	): this {
 		validateListener(listener);
 
 		const events = this._events;
@@ -448,7 +451,10 @@ export class AsyncEventEmitter<
 		...args: GetAsyncEventEmitterEventParameters<AsyncEventEmitter<Events>, K>
 	): boolean;
 
-	public emit(eventName: string | symbol, ...args: any[]): boolean {
+	public emit<K extends string | symbol>(
+		eventName: K,
+		...args: GetAsyncEventEmitterEventParameters<AsyncEventEmitter<Events>, K>
+	): boolean {
 		let doError = eventName === 'error';
 
 		const events = this._events;
@@ -1003,7 +1009,10 @@ function handleMaybeAsync(emitter: AsyncEventEmitter<any>, result: any) {
 
 		if (typeof the === 'function') {
 			the.call(result, undefined, (error: any) => {
-				emitter.emit('error', error);
+				// Emit on next tick
+				setTimeout(() => {
+					emitter.emit('error', error);
+				}, 0);
 			});
 		}
 

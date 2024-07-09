@@ -20,7 +20,7 @@ const sharedConfig: Options = {
 	},
 	splitting: false,
 	keepNames: true,
-	dts: false,
+	dts: true,
 	sourcemap: true,
 	treeshake: false,
 	outDir: 'dist',
