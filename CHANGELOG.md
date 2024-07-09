@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+# [2.4.2](https://github.com/vladfrangu/async_event_emitter/compare/v2.4.2...v2.4.2) - (2024-07-09)
+
+## 🐛 Bug Fixes
+
+- Built types were wrong, causing inference issues ([28e9247](https://github.com/vladfrangu/async_event_emitter/commit/28e9247250e5a39f11a31efab88df334f05d6bfd))
+
 # [2.4.1](https://github.com/vladfrangu/async_event_emitter/compare/v2.4.1...v2.4.1) - (2024-07-03)
 
 ## 🐛 Bug Fixes
