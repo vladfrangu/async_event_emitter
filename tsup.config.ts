@@ -16,11 +16,11 @@ const sharedConfig: Options = {
 	terserOptions: {
 		mangle: false,
 		keep_classnames: true,
-		keep_fnames: true
+		keep_fnames: true,
 	},
 	splitting: false,
 	keepNames: true,
-	dts: true,
+	dts: false,
 	sourcemap: true,
 	treeshake: false,
 	outDir: 'dist',
@@ -44,23 +44,23 @@ const sharedConfig: Options = {
 
 					await writeFile(resolve(process.cwd(), file.name), newContent, 'utf-8');
 				}
-			}
-		}
-	]
+			},
+		},
+	],
 };
 
 export default [
 	defineConfig({
 		...sharedConfig,
 		format: 'cjs',
-		outExtension: () => ({ js: '.cjs' })
+		outExtension: () => ({ js: '.cjs' }),
 	}),
 	defineConfig({
 		...sharedConfig,
-		format: 'esm'
+		format: 'esm',
 	}),
 	defineConfig({
 		...sharedConfig,
-		format: 'iife'
-	})
+		format: 'iife',
+	}),
 ];

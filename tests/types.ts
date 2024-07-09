@@ -163,3 +163,27 @@ declare const t2: AsyncEventEmitter<Events>;
 	const l = t2.listeners('baz');
 	//    ^?
 }
+
+enum EventsEnum {
+	Test1 = 'test1',
+}
+
+interface Events2 {
+	[EventsEnum.Test1]: [bar: string];
+}
+
+declare const emitterWithEnum: AsyncEventEmitter<Events2>;
+
+emitterWithEnum.on(EventsEnum.Test1, (bar) => {
+	console.log(bar);
+});
+
+class Extension extends AsyncEventEmitter<Events2> {
+	public emitCustom() {
+		// this.emit();
+
+		// this.on();
+
+		this.emit(EventsEnum.Test1, 123);
+	}
+}
