@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+# [2.4.4](https://github.com/vladfrangu/async_event_emitter/compare/v2.4.4...v2.4.4) - (2024-07-15)
+
+## 🐛 Bug Fixes
+
+- Accidentally inverted emit error event logic ([134ab3c](https://github.com/vladfrangu/async_event_emitter/commit/134ab3cf526137a0f014ed2984554a62a7714df7))
+
 # [2.4.2](https://github.com/vladfrangu/async_event_emitter/compare/v2.4.2...v2.4.2) - (2024-07-09)
 
 ## 🐛 Bug Fixes
