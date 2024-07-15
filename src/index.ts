@@ -459,7 +459,7 @@ export class AsyncEventEmitter<
 
 		const events = this._events;
 		if (events !== undefined) {
-			doError = doError && 'error' in events;
+			doError = doError && events.error === undefined;
 		} else if (!doError) {
 			return false;
 		}
