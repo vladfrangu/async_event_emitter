@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+# [2.4.5](https://github.com/vladfrangu/async_event_emitter/compare/v2.4.5...v2.4.5) - (2024-08-01)
+
+## 🐛 Bug Fixes
+
+- Brand each AEE instance so inference can work with AEE.on ([305b2c9](https://github.com/vladfrangu/async_event_emitter/commit/305b2c9bc7ccbe21355f8bbf4ee8c5a9cf460188))
+
 # [2.4.4](https://github.com/vladfrangu/async_event_emitter/compare/v2.4.4...v2.4.4) - (2024-07-15)
 
 ## 🐛 Bug Fixes
