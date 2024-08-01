@@ -187,3 +187,9 @@ class Extension extends AsyncEventEmitter<Events2> {
 		this.emit(EventsEnum.Test1, 123);
 	}
 }
+
+declare const extended: Extension;
+
+{
+	const promise1 = AsyncEventEmitter.once(extended, EventsEnum.Test1);
+}

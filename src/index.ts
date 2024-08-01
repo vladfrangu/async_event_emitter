@@ -134,10 +134,17 @@ export type AsyncEventEmitterListenerForEvent<
 	EventName extends PropertyKey | keyof AsyncEventEmitterPredefinedEvents,
 > = Exclude<AsyncEventEmitterInternalListenerForEvent<EE, EventName>['listener'], undefined>;
 
+const brandSymbol = Symbol.for('async-event-emitter.ts-brand');
+
 export class AsyncEventEmitter<
 	// eslint-disable-next-line @typescript-eslint/ban-types
 	Events extends {} = {},
 > {
+	/**
+	 * This field doesn't actually exist, it's just a way to make TS properly infer the events from classes that extend AsyncEventEmitter
+	 */
+	protected readonly [brandSymbol]!: Events;
+
 	private _events: Record<string | symbol, Listener | InternalEventMap> = {
 		__proto__: null,
 	} as Record<keyof Events | keyof AsyncEventEmitterPredefinedEvents, Listener | InternalEventMap>;
