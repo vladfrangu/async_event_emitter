@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+# [2.4.6](https://github.com/vladfrangu/async_event_emitter/compare/v2.4.6...v2.4.6) - (2024-08-21)
+
+## 🐛 Bug Fixes
+
+- Static `.on` returning wrong iterator types ([77ad774](https://github.com/vladfrangu/async_event_emitter/commit/77ad7741f75eeb499d217d7e93ce3fb5aab483ea))
+
 # [2.4.5](https://github.com/vladfrangu/async_event_emitter/compare/v2.4.5...v2.4.5) - (2024-08-01)
 
 ## 🐛 Bug Fixes
