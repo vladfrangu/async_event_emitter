@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-types */
 /* eslint-disable @typescript-eslint/dot-notation */
 function validateListener(input: unknown): asserts input is (...args: unknown[]) => void {
 	if (typeof input !== 'function') {
@@ -136,10 +137,7 @@ export type AsyncEventEmitterListenerForEvent<
 
 const brandSymbol = Symbol.for('async-event-emitter.ts-brand');
 
-export class AsyncEventEmitter<
-	// eslint-disable-next-line @typescript-eslint/ban-types
-	Events extends {} = {},
-> {
+export class AsyncEventEmitter<Events extends {} = {}> {
 	/**
 	 * This field doesn't actually exist, it's just a way to make TS properly infer the events from classes that extend AsyncEventEmitter
 	 */
@@ -685,10 +683,9 @@ export class AsyncEventEmitter<
 	}
 
 	public static listenerCount<
-		Emitter extends AsyncEventEmitter<any>,
-		EventNames = Emitter extends AsyncEventEmitter<infer Events> ? Events : never,
-		EventName extends PropertyKey = EventNames extends never ? string | symbol : keyof EventNames,
-	>(emitter: Emitter, eventName: EventName | keyof AsyncEventEmitterPredefinedEvents): number;
+		EventMap extends {},
+		EventName extends PropertyKey = keyof EventMap | keyof AsyncEventEmitterPredefinedEvents,
+	>(emitter: AsyncEventEmitter<EventMap>, eventName: EventName | keyof AsyncEventEmitterPredefinedEvents): number;
 
 	public static listenerCount(emitter: AsyncEventEmitter<any>, eventName: string | symbol): number;
 
@@ -697,15 +694,13 @@ export class AsyncEventEmitter<
 	}
 
 	public static async once<
-		Emitter extends AsyncEventEmitter<any>,
-		EventNames extends Record<PropertyKey, unknown[]> = Emitter extends AsyncEventEmitter<infer Events> ? Events
-		:	Record<PropertyKey, unknown[]>,
-		EventName extends PropertyKey = keyof EventNames | keyof AsyncEventEmitterPredefinedEvents,
+		EventMap extends {},
+		EventName extends PropertyKey = keyof EventMap | keyof AsyncEventEmitterPredefinedEvents,
 	>(
-		emitter: Emitter,
+		emitter: AsyncEventEmitter<EventMap>,
 		eventName: EventName,
 		options?: AbortableMethods,
-	): Promise<GetAsyncEventEmitterEventParameters<Emitter, EventName>>;
+	): Promise<GetAsyncEventEmitterEventParameters<AsyncEventEmitter<EventMap>, EventName>>;
 
 	public static async once(
 		emitter: AsyncEventEmitter<any>,
@@ -764,15 +759,13 @@ export class AsyncEventEmitter<
 	}
 
 	public static on<
-		Emitter extends AsyncEventEmitter<any>,
-		EventNames extends Record<PropertyKey, unknown[]> = Emitter extends AsyncEventEmitter<infer Events> ? Events
-		:	Record<PropertyKey, unknown[]>,
-		EventName extends PropertyKey = keyof EventNames | keyof AsyncEventEmitterPredefinedEvents,
+		EventMap extends {},
+		EventName extends PropertyKey = keyof EventMap | keyof AsyncEventEmitterPredefinedEvents,
 	>(
-		emitter: Emitter,
+		emitter: AsyncEventEmitter<EventMap>,
 		eventName: EventName,
 		options?: AbortableMethods,
-	): AsyncGenerator<GetAsyncEventEmitterEventParameters<Emitter, EventName>, void>;
+	): AsyncGenerator<GetAsyncEventEmitterEventParameters<AsyncEventEmitter<EventMap>, EventName>, void>;
 
 	public static on(
 		emitter: AsyncEventEmitter<any>,

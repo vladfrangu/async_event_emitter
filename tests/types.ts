@@ -186,6 +186,14 @@ class Extension extends AsyncEventEmitter<Events2> {
 
 		this.emit(EventsEnum.Test1, 123);
 	}
+
+	public async selfIterate() {
+		const iterator = AsyncEventEmitter.on(this, EventsEnum.Test1);
+
+		for await (const [bar] of iterator) {
+			console.log(bar);
+		}
+	}
 }
 
 declare const extended: Extension;
