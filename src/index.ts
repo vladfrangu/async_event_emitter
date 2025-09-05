@@ -512,7 +512,7 @@ export class AsyncEventEmitter<Events extends {} = {}> {
 		if (typeof handlers === 'function') {
 			const result = handlers.apply(this, args);
 
-			if (result !== undefined && result !== null) {
+			if (result !== undefined && result !== null && eventName !== 'error') {
 				handleMaybeAsync(this, result);
 			}
 		} else {
@@ -523,7 +523,7 @@ export class AsyncEventEmitter<Events extends {} = {}> {
 				// We call all listeners regardless of the result, as we already handle possible error emits in the wrapped func
 				const result = listeners[i].apply(this, args);
 
-				if (result !== undefined && result !== null) {
+				if (result !== undefined && result !== null && eventName !== 'error') {
 					handleMaybeAsync(this, result);
 				}
 			}
@@ -900,6 +900,7 @@ export class AsyncEventEmitter<Events extends {} = {}> {
 export interface AsyncEventEmitterPredefinedEvents {
 	newListener: [eventName: string | symbol, listener: (...args: any[]) => void];
 	removeListener: [eventName: string | symbol, listener: (...args: any[]) => void];
+	error: [error: any];
 }
 
 interface WrappedOnceState<Args extends unknown[] = unknown[]> {
@@ -1004,24 +1005,49 @@ export class AbortError extends Error {
 
 function handleMaybeAsync(emitter: AsyncEventEmitter<any>, result: any) {
 	try {
-		const the = result.then;
+		const catchMethod = result.catch;
 		const fin = result.finally;
 
-		if (typeof the === 'function') {
-			the.call(result, undefined, (error: any) => {
-				// Emit on next tick
-				setTimeout(() => {
-					emitter.emit('error', error);
-				}, 0);
+		// First, handle promise rejections with .catch()
+		if (typeof catchMethod === 'function') {
+			const handledPromise = catchMethod.call(result, (error: any) => {
+				// Emit error event synchronously to avoid unhandled promise rejection
+				emitter.emit('error', error);
+				// Return undefined to resolve the catch promise
+				return undefined;
 			});
-		}
-
-		if (typeof fin === 'function') {
-			const promiseId = String(++emitter['_wrapperId']);
-			emitter['_internalPromiseMap'].set(promiseId, result);
-			fin.call(result, function final() {
-				emitter['_internalPromiseMap'].delete(promiseId);
-			});
+			
+			// Use the handled promise for tracking instead of the original
+			if (typeof fin === 'function') {
+				const promiseId = String(++emitter['_wrapperId']);
+				emitter['_internalPromiseMap'].set(promiseId, handledPromise);
+				fin.call(handledPromise, function final() {
+					emitter['_internalPromiseMap'].delete(promiseId);
+				});
+			}
+		} else {
+			// Fallback for promise-like objects without .catch()
+			const the = result.then;
+			if (typeof the === 'function') {
+				const handledPromise = the.call(result, 
+					() => {
+						// Promise resolved successfully, nothing to do
+					}, 
+					(error: any) => {
+						// Emit error event synchronously
+						emitter.emit('error', error);
+					}
+				);
+				
+				// Use the handled promise for tracking
+				if (typeof fin === 'function') {
+					const promiseId = String(++emitter['_wrapperId']);
+					emitter['_internalPromiseMap'].set(promiseId, handledPromise);
+					fin.call(handledPromise, function final() {
+						emitter['_internalPromiseMap'].delete(promiseId);
+					});
+				}
+			}
 		}
 	} catch (err) {
 		emitter.emit('error', err);
