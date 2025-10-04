@@ -1052,5 +1052,5 @@ function emitErrorFromRejectionHandler(emitter: AsyncEventEmitter<any>, error: a
 		} finally {
 			emitter[kCapturePromiseRejections] = true;
 		}
-	}, 1);
+	}, 0);
 }
