@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+# [2.4.7](https://github.com/vladfrangu/async_event_emitter/compare/v2.4.7...v2.4.7) - (2025-10-04)
+
+## 🐛 Bug Fixes
+
+- Emit error event if handler is attached, emit logging enhancements (#9) ([3e4448c](https://github.com/vladfrangu/async_event_emitter/commit/3e4448cc9600fb344a3ea0ba13d7326c371f010c))
+
 # [2.4.6](https://github.com/vladfrangu/async_event_emitter/compare/v2.4.6...v2.4.6) - (2024-08-21)
 
 ## 🐛 Bug Fixes
