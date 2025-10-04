@@ -12,15 +12,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Project
-        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # tag=v3
+        uses: actions/checkout@v5
 
       - name: Add problem matcher
         run: echo "::add-matcher::.github/problemMatchers/eslint.json"
 
-      - name: Use Node.js v20
-        uses: actions/setup-node@eeb10cff27034e7acf239c5d29f62154018672fd # tag=v3
+      - name: Use Node.js v22
+        uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
           cache: yarn
           registry-url: https://registry.npmjs.org/
 
@@ -36,13 +36,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [18, 20]
+        node: [18, 20, 22]
     steps:
       - name: Checkout Project
-        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # tag=v3
+        uses: actions/checkout@v5
 
       - name: Use Node.js ${{ matrix.node }}
-        uses: actions/setup-node@eeb10cff27034e7acf239c5d29f62154018672fd # tag=v3
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ matrix.node }}
           cache: yarn
@@ -55,8 +55,8 @@ jobs:
         run: yarn test --coverage
 
       - name: Store code coverage report
-        uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8 # tag=v3
-        if: matrix.node == 20
+        uses: actions/upload-artifact@v4
+        if: matrix.node == 22
         with:
           name: coverage
           path: coverage/
@@ -66,15 +66,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Project
-        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # tag=v3
+        uses: actions/checkout@v5
 
       - name: Add problem matcher
         run: echo "::add-matcher::.github/problemMatchers/tsc.json"
 
-      - name: Use Node.js 20
-        uses: actions/setup-node@eeb10cff27034e7acf239c5d29f62154018672fd # tag=v3
+      - name: Use Node.js 22
+        uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
           cache: yarn
           registry-url: https://registry.npmjs.org/
 
@@ -83,26 +83,3 @@ jobs:
 
       - name: Build Code
         run: yarn build
-
-  Upload_Coverage_Report:
-    name: Upload coverage report to codecov
-    needs: [Testing]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Project
-        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # tag=v3
-        with:
-          fetch-depth: 2
-
-      - name: Download Coverage report
-        uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741 # tag=v3
-        with:
-          name: coverage
-          path: coverage/
-
-      - name: Codecov Upload
-        uses: codecov/codecov-action@81cd2dc8148241f03f5839d295e000b8f761e378 # tag=v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          directory: coverage/
-          fail_ci_if_error: true
