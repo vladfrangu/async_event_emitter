@@ -5,7 +5,7 @@ import { Options, defineConfig } from 'tsup';
 const sharedConfig: Options = {
 	entry: ['src/index.ts'],
 	external: [],
-	noExternal: [],
+	noExternal: ['node-inspect-extracted'],
 	platform: 'neutral',
 	target: 'es2020',
 	skipNodeModulesBundle: true,

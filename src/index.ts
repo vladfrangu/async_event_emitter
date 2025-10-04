@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-types */
 /* eslint-disable @typescript-eslint/dot-notation */
+import { inspect } from 'node-inspect-extracted';
+
 function validateListener(input: unknown): asserts input is (...args: unknown[]) => void {
 	if (typeof input !== 'function') {
 		throw new TypeError(`The listener argument must be a function. Received ${typeof input}`);
@@ -137,6 +139,8 @@ export type AsyncEventEmitterListenerForEvent<
 
 const brandSymbol = Symbol.for('async-event-emitter.ts-brand');
 
+const kCapturePromiseRejections = Symbol.for('async-event-emitter.ts-capture-promise-rejections');
+
 export class AsyncEventEmitter<Events extends {} = {}> {
 	/**
 	 * This field doesn't actually exist, it's just a way to make TS properly infer the events from classes that extend AsyncEventEmitter
@@ -151,6 +155,8 @@ export class AsyncEventEmitter<Events extends {} = {}> {
 	private _maxListeners = 10;
 	private _internalPromiseMap: Map<string, Promise<void>> = new Map();
 	private _wrapperId = 0n;
+
+	private [kCapturePromiseRejections] = true;
 
 	public addListener<K extends keyof Events | keyof AsyncEventEmitterPredefinedEvents>(
 		eventName: K,
@@ -493,7 +499,12 @@ export class AsyncEventEmitter<Events extends {} = {}> {
 				throw er; // Unhandled 'error' event
 			}
 
-			const stringifiedError = String(er);
+			let stringifiedError: string;
+			try {
+				stringifiedError = inspect(er);
+			} catch {
+				stringifiedError = String(er);
+			}
 
 			// Give some error to user
 			const err = new Error(`Unhandled 'error' event emitted, received ${stringifiedError}`);
@@ -1003,27 +1014,43 @@ export class AbortError extends Error {
 }
 
 function handleMaybeAsync(emitter: AsyncEventEmitter<any>, result: any) {
+	if (!emitter[kCapturePromiseRejections]) {
+		return;
+	}
+
 	try {
 		const the = result.then;
 		const fin = result.finally;
 
+		let handledPromise = result;
+
 		if (typeof the === 'function') {
-			the.call(result, undefined, (error: any) => {
+			handledPromise = the.call(result, undefined, (error: any) => {
 				// Emit on next tick
-				setTimeout(() => {
-					emitter.emit('error', error);
-				}, 0);
+				emitErrorFromRejectionHandler(emitter, error);
 			});
 		}
 
 		if (typeof fin === 'function') {
 			const promiseId = String(++emitter['_wrapperId']);
 			emitter['_internalPromiseMap'].set(promiseId, result);
-			fin.call(result, function final() {
+			fin.call(handledPromise, function final() {
 				emitter['_internalPromiseMap'].delete(promiseId);
 			});
 		}
 	} catch (err) {
 		emitter.emit('error', err);
 	}
+}
+
+function emitErrorFromRejectionHandler(emitter: AsyncEventEmitter<any>, error: any) {
+	// Emit on next tick
+	setTimeout(() => {
+		try {
+			emitter[kCapturePromiseRejections] = false;
+			emitter.emit('error', error);
+		} finally {
+			emitter[kCapturePromiseRejections] = true;
+		}
+	}, 1);
 }

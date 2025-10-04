@@ -201,3 +201,19 @@ declare const extended: Extension;
 {
 	const promise1 = AsyncEventEmitter.once(extended, EventsEnum.Test1);
 }
+
+{
+	class Test extends AsyncEventEmitter {
+		public test() {
+			return true;
+		}
+	}
+
+	class Test2 extends AsyncEventEmitter {}
+
+	const server = {} as Test | Test2;
+
+	server.on('newListener', (...args) => {});
+
+	server.on('');
+}

@@ -1379,6 +1379,7 @@ __metadata:
     eslint-config-prettier: "npm:^9.1.0"
     eslint-plugin-prettier: "npm:^5.1.3"
     lint-staged: "npm:^15.2.7"
+    node-inspect-extracted: "npm:^3.2.1"
     prettier: "npm:^3.3.2"
     tsup: "npm:^8.1.0"
     typedoc: "npm:^0.26.2"
@@ -4588,6 +4589,13 @@ __metadata:
   bin:
     node-gyp: bin/node-gyp.js
   checksum: 10/7a9f184dda7bd53970ac52e138b091b417505bef5be0a7d9a902137a55246afaebbae1263a0545b6d7d94af131bcd49ac99f18db0b801c5b4c627dd291c08a7f
+  languageName: node
+  linkType: hard
+
+"node-inspect-extracted@npm:^3.2.1":
+  version: 3.2.1
+  resolution: "node-inspect-extracted@npm:3.2.1"
+  checksum: 10/ea718fceb8edc26e6d81681b46d130ebc2f0f91a9ca3d3ba0a79c577722fd476baa3845266e4155ef860920cddf59ae30afeb10edffe3fa3a51f863b3f043aa5
   languageName: node
   linkType: hard
 
