@@ -1243,7 +1243,7 @@ __metadata:
     eslint-config-prettier: "npm:^9.1.2"
     eslint-plugin-prettier: "npm:^5.5.4"
     lint-staged: "npm:^15.5.2"
-    node-inspect-extracted: "npm:^3.2.1"
+    node-inspect-extracted: "npm:^3.2.2"
     prettier: "npm:^3.6.2"
     tsup: "npm:^8.5.0"
     typedoc: "npm:^0.26.2"
@@ -4170,10 +4170,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"node-inspect-extracted@npm:^3.2.1":
-  version: 3.2.1
-  resolution: "node-inspect-extracted@npm:3.2.1"
-  checksum: 10/ea718fceb8edc26e6d81681b46d130ebc2f0f91a9ca3d3ba0a79c577722fd476baa3845266e4155ef860920cddf59ae30afeb10edffe3fa3a51f863b3f043aa5
+"node-inspect-extracted@npm:^3.2.2":
+  version: 3.2.2
+  resolution: "node-inspect-extracted@npm:3.2.2"
+  checksum: 10/f10df3b9b3f10c8b633c3036cb30af90522d205b3c012ef5529f5cce6ee4f8185b41307bb0fa6eb466e72a6c24e402c4792915f796a4db49eb1586262a5d2418
   languageName: node
   linkType: hard
 
